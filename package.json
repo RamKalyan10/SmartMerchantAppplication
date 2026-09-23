@@ -1,0 +1,24 @@
+{
+  "name": "smart-merchant",
+  "version": "1.0.0",
+  "description": "Smart Merchant: AI-Powered Merchant Management and Business Intelligence Platform",
+  "scripts": {
+    "start:backend": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start:ml": "cd ml-service && python run.py"
+  },
+  "keywords": [
+    "smart-merchant",
+    "business-intelligence",
+    "machine-learning",
+    "sales-forecasting",
+    "demand-prediction",
+    "scikit-learn",
+    "fastapi",
+    "react",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
