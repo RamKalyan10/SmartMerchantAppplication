@@ -337,10 +337,10 @@ async function seedDatabase(options = {}) {
     db.table('products').insert({ ...prod, store_id: storeId }, false);
   });
 
-  // 8. Generate Realistic POS Invoices (2026-01-05 to 2026-09-20)
+  // 8. Generate Realistic POS Invoices (2026-01-05 to 2026-09-23)
   // Calibrated to 22-27 daily invoices for a realistic retail monthly net profit of ₹60k - ₹80k
   const startDate = new Date('2026-01-05T00:00:00Z');
-  const endDate = new Date('2026-09-20T00:00:00Z');
+  const endDate = new Date('2026-09-23T00:00:00Z');
   const totalDays = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   console.log(`Generating invoices across ${totalDays} days (${startDate.toISOString().slice(0, 10)} to ${endDate.toISOString().slice(0, 10)})...`);

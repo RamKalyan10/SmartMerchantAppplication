@@ -1,7 +1,6 @@
 """
 Inference for Model 4: Inventory Status (Logistic Regression)
-Loads 'models/inventory_model.joblib' and determines status:
-[RESTOCK, SUFFICIENT, OVERSTOCK]
+Loads 'models/inventory_model.joblib' and caches in memory.
 """
 
 import os
@@ -9,13 +8,20 @@ import joblib
 import numpy as np
 from typing import Dict, Any
 
+_CACHED_MODEL = None
+
 def get_inventory_model():
+    global _CACHED_MODEL
+    if _CACHED_MODEL is not None:
+        return _CACHED_MODEL
+        
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, "models", "inventory_model.joblib")
     if not os.path.exists(model_path):
         from training.train_inventory import train_inventory_model
         train_inventory_model()
-    return joblib.load(model_path)
+    _CACHED_MODEL = joblib.load(model_path)
+    return _CACHED_MODEL
 
 def predict_inventory_status(current_stock: int, predicted_demand: int, reorder_level: int, quantity_sold: int, turnover_rate: float) -> Dict[str, Any]:
     """Predicts inventory operational status and class probability distribution."""

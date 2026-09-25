@@ -2,6 +2,23 @@ const db = require('../config/db');
 
 const getStoreId = (req) => req.storeId || req.user?.store_id || 'store_dwdm_001';
 
+const getInvoiceEpoch = (inv) => {
+  const dStr = inv.date || (inv.created_at ? inv.created_at.split('T')[0] : '1970-01-01');
+  let tStr = inv.time || '';
+  if (!tStr) {
+    if (inv.created_at && inv.created_at.includes('T')) {
+      tStr = inv.created_at.split('T')[1].replace('Z', '').split('.')[0];
+    } else {
+      tStr = '00:00:00';
+    }
+  }
+  if (tStr.length === 5) tStr += ':00';
+  const iso = `${dStr}T${tStr}`;
+  const parsed = new Date(iso).getTime();
+  if (!isNaN(parsed) && parsed > 0) return parsed;
+  return new Date(inv.created_at || inv.date || 0).getTime() || 0;
+};
+
 exports.getInvoices = (req, res) => {
   const storeId = getStoreId(req);
   const { customer_id, start_date, end_date, payment_status } = req.query;
@@ -20,8 +37,8 @@ exports.getInvoices = (req, res) => {
     invoices = invoices.filter(inv => inv.date <= end_date);
   }
 
-  // Sort descending by date
-  invoices.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
+  // Sort strictly descending by exact datetime (newest first)
+  invoices.sort((a, b) => getInvoiceEpoch(b) - getInvoiceEpoch(a));
   res.json({ invoices, total: invoices.length });
 };
 
@@ -110,36 +127,33 @@ exports.createInvoice = (req, res) => {
     const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
 
     // Upsert or update customer record
-    let finalCustId = customer_id || null;
-    let finalCustName = customer_name || 'Walk-in Customer';
+    const isWalkIn = !customer_id || customer_id === 'walk_in' ||
+      !customer_name ||
+      customer_name.trim().toLowerCase() === 'walk-in customer' ||
+      customer_name.trim().toLowerCase() === 'walk-in' ||
+      customer_name.trim().toLowerCase() === 'walkin' ||
+      req.body.is_walkin === true;
+
+    let finalCustId = null;
+    let finalCustName = 'Walk-in Customer';
     let existingCust = null;
 
-    if (finalCustId) {
-      existingCust = db.table('customers').findOne(c => c.id === finalCustId && c.store_id === storeId);
-    }
-    if (!existingCust && customer_phone) {
-      existingCust = db.table('customers').findOne(c => c.phone === customer_phone && c.store_id === storeId);
+    if (!isWalkIn) {
+      if (customer_id) {
+        existingCust = db.table('customers').findOne(c => c.id === customer_id && c.store_id === storeId);
+      }
+      if (!existingCust && customer_phone) {
+        existingCust = db.table('customers').findOne(c => c.phone === customer_phone && c.store_id === storeId);
+      }
     }
 
     const isPaid = (payment_status || 'PAID').toUpperCase() === 'PAID';
 
-    if (!existingCust && (customer_phone || (customer_name && customer_name.trim() !== 'Walk-in Customer'))) {
-      existingCust = db.table('customers').insert({
-        store_id: storeId,
-        name: customer_name || 'Customer',
-        phone: customer_phone || '',
-        email: customer_email || '',
-        total_spent: isPaid ? round2(grandTotal) : 0,
-        pending_amount: isPaid ? 0 : round2(grandTotal),
-        orders_count: 1
-      });
-      finalCustId = existingCust.id;
-      finalCustName = existingCust.name;
+    if (isWalkIn) {
+      finalCustId = null;
+      finalCustName = customer_name && customer_name.trim() ? customer_name.trim() : 'Walk-in Customer';
     } else if (existingCust) {
       finalCustId = existingCust.id;
-      if (!existingCust.name && customer_name) {
-        existingCust.name = customer_name;
-      }
       finalCustName = existingCust.name;
       const prevSpent = Number(existingCust.total_spent || 0);
       const prevPending = Number(existingCust.pending_amount || 0);
@@ -151,13 +165,35 @@ exports.createInvoice = (req, res) => {
         pending_amount: isPaid ? prevPending : round2(prevPending + grandTotal),
         orders_count: (Number(existingCust.orders_count) || 0) + 1
       });
+    } else if (req.body.save_as_new_customer && customer_name && customer_name.trim() !== 'Walk-in Customer') {
+      // Only register as a new customer if explicitly requested
+      existingCust = db.table('customers').insert({
+        store_id: storeId,
+        name: customer_name.trim(),
+        phone: customer_phone || '',
+        email: customer_email || '',
+        total_spent: isPaid ? round2(grandTotal) : 0,
+        pending_amount: isPaid ? 0 : round2(grandTotal),
+        orders_count: 1
+      });
+      finalCustId = existingCust.id;
+      finalCustName = existingCust.name;
+    } else {
+      // Default non-registered buyer
+      finalCustId = null;
+      finalCustName = customer_name && customer_name.trim() ? customer_name.trim() : 'Walk-in Customer';
     }
 
     const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     const invoiceDate = req.body.date || todayStr;
-    const invoiceTime = req.body.time || timeStr;
-    const createdAt = req.body.created_at || (req.body.date ? `${req.body.date}T${invoiceTime.length === 5 ? invoiceTime + ':00' : invoiceTime}.000Z` : now.toISOString());
+    const rawTime = req.body.time || timeStr;
+    const invoiceTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+    const createdAt = req.body.created_at || `${invoiceDate}T${invoiceTime}.000Z`;
+
+    const dObj = new Date(invoiceDate);
+    const dow = dObj.getDay();
+    const defaultDayType = (dow === 0 || dow === 6) ? 'Weekend' : 'Working Day';
 
     const invoice = db.table('invoices').insert({
       store_id: storeId,
@@ -179,7 +215,7 @@ exports.createInvoice = (req, res) => {
       cashier_id: req.user ? req.user.id : undefined,
       cashier_name: req.user ? req.user.name : undefined,
       billed_by: req.user ? req.user.name : 'Staff',
-      notes: notes || req.body.notes || 'Regular Day'
+      notes: notes || req.body.notes || defaultDayType
     });
 
     // Also populate invoice_items table for relational integrity

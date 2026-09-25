@@ -1,6 +1,6 @@
 """
 Inference for Model 2: Product Demand (KNN Regression)
-Loads 'models/demand_model.joblib' and predicts future unit demand.
+Loads 'models/demand_model.joblib' and caches in memory.
 Includes Smart Merchant business logic:
 Shortage = max(0, Predicted Demand - Current Stock)
 """
@@ -10,13 +10,20 @@ import joblib
 import numpy as np
 from typing import Dict, Any
 
+_CACHED_MODEL = None
+
 def get_demand_model():
+    global _CACHED_MODEL
+    if _CACHED_MODEL is not None:
+        return _CACHED_MODEL
+        
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, "models", "demand_model.joblib")
     if not os.path.exists(model_path):
         from training.train_demand import train_demand_model
         train_demand_model()
-    return joblib.load(model_path)
+    _CACHED_MODEL = joblib.load(model_path)
+    return _CACHED_MODEL
 
 def predict_product_demand(current_stock: int, demand_7d: float, demand_30d: float, avg_daily: float, price: float, discount: float = 5.0) -> Dict[str, Any]:
     """Predicts product demand and calculates shortage and order recommendation."""

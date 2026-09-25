@@ -16,7 +16,13 @@ async function startServer() {
     await db.loadFromPostgres();
 
     // Seed initial dataset only if database is newly initialized
-    await seedDatabase();
+    const existingInvoicesCount = db.table('invoices').find().length;
+    if (existingInvoicesCount === 0) {
+      console.log('Database empty. Seeding initial dataset...');
+      await seedDatabase();
+    } else {
+      console.log(`Database already populated (${existingInvoicesCount} invoices). Skipping reseed.`);
+    }
 
     // Sync any unsynced records to PostgreSQL
     await db.syncAllToPostgres();

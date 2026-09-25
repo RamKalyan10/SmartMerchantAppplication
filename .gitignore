@@ -1,4 +1,4 @@
-﻿# ─── Credentials & Secrets ───────────────────────────────────────────────────
+# ─── Credentials & Secrets ───────────────────────────────────────────────────
 acc_pss.md
 *.pem
 *.key
@@ -20,6 +20,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
 
 # ─── Build Outputs ───────────────────────────────────────────────────────────
 dist/

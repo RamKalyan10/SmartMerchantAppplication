@@ -306,18 +306,21 @@ export default function ForecastingPage({ setActiveTab }) {
 
           <div className="glass-panel p-5 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/40 dark:bg-slate-900/60 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-semibold">Gross / Net Profit</span>
+              <span className="font-semibold">Gross Profit</span>
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <h3 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1.5 font-mono">
-              {formatCurrency(insights.predicted_net_profit)}
+              {formatCurrency(insights.expected_gross_profit || insights.predicted_net_profit)}
             </h3>
             <div className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-              {/* The 0.26 fallback was an invented retail-margin assumption that
-                  silently replaced the measured gross profit whenever the field
-                  was missing. COGS now comes from real invoice cost prices. */}
-              <span>Gross: {formatCurrency(insights.expected_gross_profit)}</span>
-              <span className="text-[10px] text-slate-500 font-normal">(Net: ~{insights.profit_margin_pct}%)</span>
+              <span>Gross Margin: ~{
+                insights.expected_revenue_next_period > 0
+                  ? ((Number(insights.expected_gross_profit || 0) / Number(insights.expected_revenue_next_period)) * 100).toFixed(1)
+                  : ((1 - (Number(insights.model_info?.cogs_ratio) || 0.801)) * 100).toFixed(1)
+              }%</span>
+              <span className="text-[10px] text-slate-500 font-normal">
+                (Revenue − COGS)
+              </span>
             </div>
             <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
               COGS basis: {insights.model_info?.cogs_basis === 'measured_from_invoice_cost_prices'
@@ -443,11 +446,23 @@ export default function ForecastingPage({ setActiveTab }) {
                 The band is the model's own 2.5th–97.5th percentile, not a fixed percentage.
               </p>
             </div>
-            <div className="text-xs text-right">
-              <span className="text-slate-500 dark:text-slate-400">Total Projected Revenue:</span>{' '}
-              <span className="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
-                {formatCurrency(salesForecast.total_forecasted_sales)}
-              </span>
+            <div className="text-xs text-right space-y-1">
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Total Projected Revenue:</span>{' '}
+                <span className="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
+                  {formatCurrency(salesForecast.total_forecasted_sales)}
+                </span>
+              </div>
+              {salesForecast.weekend_sales != null && salesForecast.workday_sales != null && (
+                <div className="flex items-center gap-1.5 justify-end text-[11px]">
+                  <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800/40">
+                    🌴 Weekends ({salesForecast.weekend_days}d): {formatCurrency(salesForecast.weekend_sales)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800/40">
+                    💼 Working Days ({salesForecast.workday_days}d): {formatCurrency(salesForecast.workday_sales)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -496,11 +511,9 @@ export default function ForecastingPage({ setActiveTab }) {
                   const d = new Date(pt.date);
                   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                   const dayName = dayNames[d.getDay()] || '';
-                  // The tag used to be re-derived in JSX from getDay(), which
-                  // silently overrode the model's own calendar reasoning and
-                  // could never surface a festival. It now comes from the API.
-                  const isSunday = d.getDay() === 0;
-                  const isSaturday = d.getDay() === 6;
+                  const dow = d.getDay();
+                  const isWeekend = pt.is_weekend != null ? pt.is_weekend : (dow === 0 || dow === 6);
+                  const dayTypeLabel = isWeekend ? '🌴 Weekend' : '💼 Working Day';
 
                   return (
                     <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
@@ -519,13 +532,11 @@ export default function ForecastingPage({ setActiveTab }) {
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <span className={`px-2.5 py-1 rounded-lg font-semibold border text-[11px] ${
-                          isSunday
+                          isWeekend
                             ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                            : isSaturday
-                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                            : 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                            : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
                         }`}>
-                          {pt.tag || dayName}
+                          {dayTypeLabel}
                         </span>
                       </td>
                     </tr>

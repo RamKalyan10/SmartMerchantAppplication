@@ -36,7 +36,7 @@ class MLClient {
   constructor() {
     this.client = axios.create({
       baseURL: ML_BASE_URL,
-      timeout: 5000,
+      timeout: 15000,
       headers: { 'Content-Type': 'application/json' }
     });
   }

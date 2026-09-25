@@ -55,7 +55,7 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
 
   // Invoice History Filters
   const [filterPeriod, setFilterPeriod] = useState('all'); // 'all' | 'today' | '7d' | '30d' | 'custom'
-  const [filterDayPattern, setFilterDayPattern] = useState('all'); // 'all' | 'sundays' | 'festivals' | 'workdays' | 'saturdays'
+  const [filterDayPattern, setFilterDayPattern] = useState('all'); // 'all' | 'weekends' | 'workdays'
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterAmountRange, setFilterAmountRange] = useState('all'); // 'all' | '0-1000' | '1000-5000' | '5000-15000' | '15000+' | 'custom'
@@ -70,39 +70,29 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
 
   const getInvoiceDayMeta = (inv) => {
     const dStr = inv.date || (inv.created_at ? inv.created_at.split('T')[0] : '');
-    if (!dStr) return { dayName: '', isSunday: false, isSaturday: false, isWorkday: false, isFestive: false, badge: null };
+    if (!dStr) return { dayName: '', isWeekend: false, isWorkday: false, badge: null };
     
     const d = new Date(dStr);
     const dow = d.getDay(); // 0 = Sunday, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[dow] || '';
 
-    const note = inv.notes || '';
-    const isFestive = note.includes('🎉') || note.toLowerCase().includes('festiv') || note.toLowerCase().includes('pooja') || note.toLowerCase().includes('holiday') || note.toLowerCase().includes('sale');
-    const isSunday = dow === 0;
-    const isSaturday = dow === 6;
-    const isWorkday = dow === 2 || dow === 3 || dow === 4; // Tue, Wed, Thu
+    // Weekends: Saturday, Sunday
+    // Working Days: Monday to Friday
+    const isWeekend = dow === 0 || dow === 6;
+    const isWorkday = dow >= 1 && dow <= 5;
 
-    let badge = null;
-    if (isFestive) {
-      badge = { text: '🎉 Festival Surge', bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/40' };
-    } else if (isSunday) {
-      badge = { text: '🌟 Sunday Peak', bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' };
-    } else if (isSaturday) {
-      badge = { text: '🛒 Saturday Rush', bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/40' };
-    } else if (isWorkday) {
-      badge = { text: '🏢 Workday Lull', bg: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
-    } else {
-      badge = { text: `📅 ${dayName}`, bg: 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
-    }
+    const badge = isWeekend
+      ? { text: '🌴 Weekend', bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' }
+      : { text: '💼 Working Day', bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/40' };
 
-    return { dayName, isSunday, isSaturday, isWorkday, isFestive, badge };
+    return { dayName, isWeekend, isWorkday, badge };
   };
 
   // Cart & POS Terminal State
   const [cart, setCart] = useState([]); // [{ product_id, name, unit_price, quantity, image_url, sku, unit, maxStock }]
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('walk_in');
+  const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Cash' | 'Card' | 'NetBanking'
@@ -159,13 +149,19 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
     }
   }, [quickActionTrigger, isNewModalOpen]);
 
+  // Quick Select Walk-in Customer
+  const setWalkInCustomer = () => {
+    setSelectedCustomerId('walk_in');
+    setCustomerName('Walk-in Customer');
+    setCustomerPhone('');
+    setCustomerEmail('');
+  };
+
   // Handle Customer Selection
   const handleCustomerChange = (custId) => {
     setSelectedCustomerId(custId);
-    if (!custId) {
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerEmail('');
+    if (!custId || custId === 'walk_in') {
+      setWalkInCustomer();
       return;
     }
     const cust = customers.find(c => c.id === custId);
@@ -289,11 +285,13 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
 
     setSaving(true);
     try {
+      const isWalkin = selectedCustomerId === 'walk_in' || !selectedCustomerId || customerName.trim().toLowerCase() === 'walk-in customer';
       const payload = {
-        customer_id: selectedCustomerId || null,
+        customer_id: isWalkin ? null : selectedCustomerId,
         customer_name: customerName.trim() || 'Walk-in Customer',
         customer_phone: customerPhone.trim(),
         customer_email: customerEmail.trim(),
+        is_walkin: isWalkin,
         items: cart.map(item => ({
           product_id: item.product_id,
           product_name: item.name,
@@ -322,10 +320,7 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
 
       setSaleSuccess(created);
       clearCart();
-      setSelectedCustomerId('');
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerEmail('');
+      setWalkInCustomer();
       fetchData();
     } catch (err) {
       console.error('Invoice creation error:', err);
@@ -389,13 +384,11 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
       if (customMaxAmount !== '' && amt > Number(customMaxAmount)) return false;
     }
 
-    // 4. Day Pattern Filter (Sundays, Festivals, Workdays, Saturdays)
+    // 4. Day Type Filter (Weekends, Working Days)
     if (filterDayPattern !== 'all') {
       const meta = getInvoiceDayMeta(inv);
-      if (filterDayPattern === 'sundays' && !meta.isSunday) return false;
-      if (filterDayPattern === 'festivals' && !meta.isFestive) return false;
+      if (filterDayPattern === 'weekends' && !meta.isWeekend) return false;
       if (filterDayPattern === 'workdays' && !meta.isWorkday) return false;
-      if (filterDayPattern === 'saturdays' && !meta.isSaturday) return false;
     }
 
     // 5. Status Filter
@@ -680,22 +673,38 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
 
             {/* Customer Details Form */}
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30 space-y-2.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Customer Information
                 </label>
-                {customers.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={setWalkInCustomer}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 ${
+                      selectedCustomerId === 'walk_in' || (!selectedCustomerId && customerName === 'Walk-in Customer')
+                        ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border-brand-300 dark:border-brand-700 shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    }`}
+                    title="Quick select Walk-in Customer"
+                  >
+                    <span>🚶 Walk-in</span>
+                  </button>
                   <select
                     value={selectedCustomerId}
                     onChange={(e) => handleCustomerChange(e.target.value)}
                     className="text-[11px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500"
                   >
-                    <option value="">Quick Select Registered Customer</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.phone || 'No phone'})</option>
-                    ))}
+                    <option value="walk_in">🚶 Walk-in Customer (Default)</option>
+                    {customers.length > 0 && (
+                      <optgroup label="Registered Regular Customers">
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.phone || 'No phone'})</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
-                )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1072,25 +1081,23 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
               </div>
             </div>
 
-            {/* Row 3: Footfall Pattern Filter Pills (Sundays, Festivals, Workdays) */}
+            {/* Row 3: Day Type Filter Pills (Weekends, Working Days) */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5 flex-wrap text-xs">
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0 mr-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Store Footfall Pattern:</span>
+                <Sparkles className="w-3.5 h-3.5 text-brand-500" />
+                <span>Invoice Day Type:</span>
               </span>
               {[
-                { id: 'all', label: 'All Days' },
-                { id: 'sundays', label: '🌟 Sundays (Peak Restock)' },
-                { id: 'festivals', label: '🎉 Festivals & Holidays' },
-                { id: 'saturdays', label: '🛒 Saturdays (Weekend)' },
-                { id: 'workdays', label: '🏢 Workdays (Tue-Thu Lulls)' }
+                { id: 'all', label: 'All Invoices' },
+                { id: 'weekends', label: '🌴 Weekends (Saturday & Sunday)' },
+                { id: 'workdays', label: '💼 Working Days (Monday – Friday)' }
               ].map((pat) => (
                 <button
                   key={pat.id}
                   onClick={() => setFilterDayPattern(pat.id)}
                   className={`px-3 py-1 rounded-xl text-[11px] font-semibold transition-all ${
                     filterDayPattern === pat.id
-                      ? 'bg-amber-600 text-white shadow-sm font-bold'
+                      ? 'bg-brand-600 text-white shadow-sm font-bold'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
@@ -1205,12 +1212,26 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
                           {inv.invoice_number}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-900 dark:text-white text-[12px]">{inv.customer_name}</div>
-                          {inv.customer_phone && <div className="text-[10px] text-slate-400 font-mono">{inv.customer_phone}</div>}
+                          {inv.customer_name === 'Walk-in Customer' || !inv.customer_id ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-[11px] font-medium text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60">
+                              <span>🚶</span>
+                              <span>{inv.customer_name || 'Walk-in Customer'}</span>
+                            </span>
+                          ) : (
+                            <div>
+                              <div className="font-semibold text-slate-900 dark:text-white text-[12px] flex items-center gap-1.5">
+                                <span>{inv.customer_name}</span>
+                                <span className="text-[9px] bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/60 px-1.5 py-0.2 rounded font-bold">
+                                  Registered
+                                </span>
+                              </div>
+                              {inv.customer_phone && <div className="text-[10px] text-slate-400 font-mono">{inv.customer_phone}</div>}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
+                            <span className="font-mono text-slate-900 dark:text-slate-100 text-[11px] font-semibold">
                               {inv.date || (inv.created_at ? inv.created_at.split('T')[0] : '')}
                             </span>
                             {dayMeta.badge && (
@@ -1219,7 +1240,7 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                             {dayMeta.dayName} {inv.time ? `• ${inv.time}` : ''}
                           </div>
                         </td>

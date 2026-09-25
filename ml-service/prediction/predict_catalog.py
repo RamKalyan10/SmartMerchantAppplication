@@ -1,7 +1,6 @@
 """
 Inference for Model 3: Catalog Requirement (Decision Tree)
-Loads 'models/catalog_model.joblib' and classifies products into:
-[HIGH_DEMAND, MEDIUM_DEMAND, LOW_DEMAND, SLOW_MOVING, DEAD_STOCK]
+Loads 'models/catalog_model.joblib' and caches in memory.
 """
 
 import os
@@ -9,13 +8,20 @@ import joblib
 import numpy as np
 from typing import Dict, Any
 
+_CACHED_MODEL = None
+
 def get_catalog_model():
+    global _CACHED_MODEL
+    if _CACHED_MODEL is not None:
+        return _CACHED_MODEL
+        
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, "models", "catalog_model.joblib")
     if not os.path.exists(model_path):
         from training.train_catalog import train_catalog_model
         train_catalog_model()
-    return joblib.load(model_path)
+    _CACHED_MODEL = joblib.load(model_path)
+    return _CACHED_MODEL
 
 def classify_catalog_item(qty_sold: int, sales_30d: float, stock: int, turnover: float, days_since_sale: int, sales_90d: float) -> Dict[str, Any]:
     """Classifies catalog product and provides recommended merchandising action."""
@@ -23,7 +29,6 @@ def classify_catalog_item(qty_sold: int, sales_30d: float, stock: int, turnover:
     X = np.array([[qty_sold, sales_30d, stock, turnover, days_since_sale, sales_90d]])
     classification = model.predict(X)[0]
     
-    # Business interpretation
     action_map = {
         "HIGH_DEMAND": "Prioritize inventory replenishment; ensure zero stockouts.",
         "MEDIUM_DEMAND": "Maintain standard reorder levels and routine monitoring.",

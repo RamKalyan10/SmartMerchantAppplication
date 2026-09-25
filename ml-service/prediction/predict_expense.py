@@ -1,19 +1,26 @@
 """
 Inference for Model 5: Expense Prediction (Multiple Linear Regression)
-Loads 'models/expense_model.joblib' and forecasts future business overhead expenses.
+Loads 'models/expense_model.joblib' and caches in memory.
 """
 
 import os
 import joblib
 import numpy as np
 
+_CACHED_MODEL = None
+
 def get_expense_model():
+    global _CACHED_MODEL
+    if _CACHED_MODEL is not None:
+        return _CACHED_MODEL
+        
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, "models", "expense_model.joblib")
     if not os.path.exists(model_path):
         from training.train_expense import train_expense_model
         train_expense_model()
-    return joblib.load(model_path)
+    _CACHED_MODEL = joblib.load(model_path)
+    return _CACHED_MODEL
 
 def predict_total_expense(prev_sales: float, avg_7d_sales: float, invoice_count: int, business_activity: float, avg_3m_expense: float) -> float:
     """Predicts total overhead expense based on operational intensity and past expense levels."""

@@ -1,7 +1,6 @@
 """
 Inference for Model 6: Business Activity & Expense Segmentation (K-Means)
-Loads 'models/clustering_model.joblib' and segments operational patterns.
-Features: [total_expense, revenue, invoice_count, business_activity].
+Loads 'models/clustering_model.joblib' and caches in memory.
 """
 
 import os
@@ -9,13 +8,20 @@ import joblib
 import numpy as np
 from typing import Dict, Any
 
+_CACHED_PAYLOAD = None
+
 def get_clustering_model():
+    global _CACHED_PAYLOAD
+    if _CACHED_PAYLOAD is not None:
+        return _CACHED_PAYLOAD
+        
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, "models", "clustering_model.joblib")
     if not os.path.exists(model_path):
         from training.train_clustering import train_clustering_model
         train_clustering_model()
-    return joblib.load(model_path)
+    _CACHED_PAYLOAD = joblib.load(model_path)
+    return _CACHED_PAYLOAD
 
 def segment_business_activity(total_expense: float, revenue: float, invoice_count: int, business_activity: float) -> Dict[str, Any]:
     """Assigns business activity pattern and returns cluster name and operational insights."""
@@ -27,7 +33,6 @@ def segment_business_activity(total_expense: float, revenue: float, invoice_coun
     cluster_id = int(pipeline.predict(X)[0])
     cluster_name = cluster_names.get(cluster_id, f"Cluster {cluster_id}")
     
-    # Check if expense is disproportionately high compared to revenue
     expense_ratio = total_expense / max(revenue, 1.0)
     is_unusual = expense_ratio > 0.75 or (cluster_id == 2 and revenue < 4000)
     
