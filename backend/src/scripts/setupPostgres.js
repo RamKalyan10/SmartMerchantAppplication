@@ -11,7 +11,7 @@ async function setupPostgres() {
   const dbHost = process.env.PGHOST || 'localhost';
   const dbPort = parseInt(process.env.PGPORT || '5432', 10);
   const dbUser = process.env.PGUSER || 'postgres';
-  const dbPassword = process.env.PGPASSWORD || 'postgres';
+  const dbPassword = process.env.PGPASSWORD;
   const targetDbName = process.env.PGDATABASE || 'smart_merchant';
 
   console.log(`Connecting to PostgreSQL server at ${dbHost}:${dbPort} as user "${dbUser}"...`);

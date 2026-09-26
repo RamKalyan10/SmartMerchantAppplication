@@ -174,7 +174,11 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
   });
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0F172A]/70 backdrop-blur-md px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 transition-colors">
+    <header className={`h-16 border-b px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 transition-all duration-300 ${
+      isAuthenticated
+        ? 'border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0F172A]/70 backdrop-blur-md'
+        : 'border-white/10 bg-black/20 backdrop-blur-xl'
+    }`}>
       
       {/* Left Area: Search Bar if Authenticated / Platform Brand if Guest */}
       {isAuthenticated ? (
@@ -193,11 +197,12 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
         </div>
       ) : (
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-sm font-bold text-xs">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg font-bold text-xs"
+            style={{ background: 'linear-gradient(135deg, #7C3AED, #06B6D4)' }}>
             SM
           </div>
           <div>
-            <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Smart Merchant</span>
+            <span className="font-bold text-sm tracking-tight text-white">Smart Merchant</span>
             <span className="hidden sm:inline-block ml-2 text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider bg-brand-50 dark:bg-brand-950/60 px-1.5 py-0.2 rounded border border-brand-200 dark:border-brand-800/50">
               AI Intelligence Suite
             </span>
@@ -552,16 +557,17 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => openAuth('login')}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all"
             >
-              <LogIn className="w-3.5 h-3.5 text-brand-500" />
+              <LogIn className="w-3.5 h-3.5" />
               <span>Sign In</span>
             </button>
             <button
               onClick={() => openAuth('register')}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-brand-500/20 transition-all"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%)' }}
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Get Started</span>
             </button>
           </div>

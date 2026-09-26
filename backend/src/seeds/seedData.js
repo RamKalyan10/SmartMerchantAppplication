@@ -257,8 +257,10 @@ async function seedDatabase(options = {}) {
   console.log('   (From 2026-01-05 to 2026-09-19: 258 Days Simulation)');
   console.log('========================================================');
 
-  const ownerPasswordHash = await bcrypt.hash('onr123', 10);
-  const defaultPasswordHash = await bcrypt.hash('password123', 10);
+  const initialOwnerPass = process.env.INITIAL_OWNER_PASSWORD || process.env.OWNER_PASSWORD || Math.random().toString(36).substring(2);
+  const initialStaffPass = process.env.INITIAL_STAFF_PASSWORD || process.env.STAFF_PASSWORD || Math.random().toString(36).substring(2);
+  const ownerPasswordHash = await bcrypt.hash(initialOwnerPass, 10);
+  const defaultPasswordHash = await bcrypt.hash(initialStaffPass, 10);
   const storeId = 'store_dwdm_001';
 
   // 1. Clear database collections (Clean Slate)

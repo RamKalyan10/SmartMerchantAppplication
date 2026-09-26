@@ -26,7 +26,7 @@ async function runTests() {
 
   const randomSuffix = Math.floor(100000 + Math.random() * 900000);
   const ownerEmail = `owner_${randomSuffix}@smartmart.com`;
-  const ownerPassword = 'OwnerPass123!';
+  const ownerPassword = `TestOwner_${Math.random().toString(36).substring(2)}!1`;
 
   // 1. Register Owner
   console.log('1. Registering Owner account...');
@@ -56,7 +56,7 @@ async function runTests() {
   // 2. Owner creates Staff/Cashier account
   console.log('\n2. Owner creating Staff/Cashier account inside store...');
   const staffEmail = `cashier_${randomSuffix}@smartmart.com`;
-  const staffPassword = 'CashierPass123!';
+  const staffPassword = `TestStaff_${Math.random().toString(36).substring(2)}!1`;
 
   const staffCreateRes = await request({
     hostname: 'localhost',
@@ -194,7 +194,7 @@ async function runTests() {
   }, {
     name: 'Hacker Cashier',
     email: `hack_${randomSuffix}@smartmart.com`,
-    password: 'password123',
+    password: `TestHack_${Math.random().toString(36).substring(2)}!1`,
     role: 'Admin'
   });
   console.log('Staff staff-creation attempt status:', forbiddenRes.status, forbiddenRes.data?.message);

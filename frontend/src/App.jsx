@@ -64,7 +64,11 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 overflow-hidden transition-colors">
+    <div className={`flex h-screen text-slate-900 dark:text-slate-100 overflow-hidden transition-colors ${
+      isAuthenticated
+        ? 'bg-slate-50 dark:bg-[#0B0F19]'
+        : 'bg-[#070B14]'
+    }`}>
       
       {/* Show Sidebar only when authenticated */}
       {isAuthenticated && (
@@ -77,8 +81,8 @@ function AppContent() {
         <Navbar onOpenNewInvoice={() => handleQuickAction('invoices')} onQuickAction={handleQuickAction} />
 
         {/* Page Body Viewport - full width with max-w-[1720px] */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
-          <div className="w-full max-w-[1720px] mx-auto">
+        <main className={`flex-1 overflow-y-auto ${isAuthenticated ? 'p-4 sm:p-6 lg:p-8 space-y-6' : ''}`}>
+          <div className={isAuthenticated ? 'w-full max-w-[1720px] mx-auto' : 'w-full'}>
             {isAuthenticated ? (
               renderActivePage()
             ) : (

@@ -1,17 +1,43 @@
-# ─── Credentials & Secrets ───────────────────────────────────────────────────
+# ─── Credentials, Keys & Secrets ─────────────────────────────────────────────
 acc_pss.md
+*pass*.md
+*pass*.txt
+*credential*
+*secret*
+*.secret
 *.pem
 *.key
 *.p12
 *.pfx
+*.crt
+*.cer
+*.id_rsa
+*.id_ed25519
 
 # ─── Environment Variables ───────────────────────────────────────────────────
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
 !.env.example
+
+# ─── Local Scripts & Temporary Scratchpads ────────────────────────────────────
+scratch/
+*.scratch.*
+*.local.*
+backend/scripts/scratch*
+backend/src/scripts/scratch*
 
 # ─── Database & Persistent Data ──────────────────────────────────────────────
 backend/data/
+ml-service/data/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
 *.json.bak
 
 # ─── Node.js ─────────────────────────────────────────────────────────────────

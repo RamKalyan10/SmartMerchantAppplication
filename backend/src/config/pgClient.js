@@ -14,7 +14,7 @@ function createPgPool() {
         user: process.env.PGUSER || 'postgres',
         host: process.env.PGHOST || 'localhost',
         database: process.env.PGDATABASE || 'smart_merchant',
-        password: process.env.PGPASSWORD || 'postgres',
+        password: process.env.PGPASSWORD,
         port: parseInt(process.env.PGPORT || '5432', 10),
         connectionTimeoutMillis: 3000,
         idleTimeoutMillis: 10000

@@ -2,21 +2,29 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smart_merchant_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is not set. Add it to backend/.env');
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = db.table('users').findOne(u => u.email === email);
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    const cleanIdentifier = String(email).trim().toLowerCase();
+    const user = db.table('users').findOne(u => 
+      (u.email && u.email.toLowerCase() === cleanIdentifier) || 
+      (u.id && u.id.toLowerCase() === cleanIdentifier)
+    );
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials. User not found.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    const validFallbacks = ['password123', 'onr123', 'mgr123', 'csh1pass', 'csh2pass'];
-    if (!isMatch && !validFallbacks.includes(password)) {
-      return res.status(401).json({ message: 'Invalid password.' });
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials. Incorrect password.' });
     }
 
     const userStoreId = user.store_id || user.id;
