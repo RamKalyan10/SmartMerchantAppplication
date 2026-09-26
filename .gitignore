@@ -97,3 +97,20 @@ tmp/
 *.tmp
 *.bak
 *.swp
+
+# --- ML Model Artifacts ---
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+ml-service/models/
+
+# --- Uploaded Files (user-generated content) ---
+backend/uploads/
+uploads/
+
+# --- Jupyter Notebook Checkpoints ---
+.ipynb_checkpoints/
+
