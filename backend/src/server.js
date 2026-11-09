@@ -24,15 +24,17 @@ async function startServer() {
       console.log(`Database already populated (${existingInvoicesCount} invoices). Skipping reseed.`);
     }
 
-    // Sync any unsynced records to PostgreSQL
-    await db.syncAllToPostgres();
-
     app.listen(PORT, () => {
       console.log(`====================================================`);
       console.log(`🚀 Smart Merchant Backend Server running on port ${PORT}`);
       console.log(`📡 Base API URL: http://localhost:${PORT}/api`);
       console.log(`💡 Health Check: http://localhost:${PORT}/api/health`);
       console.log(`====================================================`);
+
+      // Sync any unsynced records to PostgreSQL in the background so port binding isn't delayed
+      db.syncAllToPostgres().catch((err) => {
+        console.warn('Background PostgreSQL sync notice:', err.message);
+      });
     });
   } catch (error) {
     console.error('Failed to start server:', error);

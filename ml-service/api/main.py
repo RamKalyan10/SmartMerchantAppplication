@@ -64,16 +64,12 @@ def health_check():
         ]
     }
 
-@app.post("/ml/sales/predict")
-def predict_sales_endpoint(payload: SalesPredictRequest):
+def compute_sales_forecast(history, days: int):
     """
     Model 1: Sales Prediction (Linear Regression).
-    Predicts sales for each future day.
+    Predicts sales for each future day with weekend footfall multipliers.
     """
-    days = max(1, payload.days)
-    history = payload.history or []
-    
-    # Extract amounts from history if available
+    days = max(1, days)
     amounts = [h.amount for h in history if h.amount > 0]
     if len(amounts) >= 7:
         prev_sales = float(amounts[-1])
@@ -100,8 +96,6 @@ def predict_sales_endpoint(payload: SalesPredictRequest):
     
     for i in range(days):
         forecast_date = start_date + timedelta(days=i)
-        # Weekends: Saturday (5), Sunday (6)
-        # Working Days: Monday (0) to Friday (4)
         is_weekend = forecast_date.weekday() >= 5
         multiplier = 1.28 if is_weekend else 1.0  # 28% weekend retail footfall surge
         
@@ -148,6 +142,14 @@ def predict_sales_endpoint(payload: SalesPredictRequest):
         "daily_forecasts": daily_forecasts,
         "confidence": 0.88
     }
+
+@app.post("/ml/sales/predict")
+def predict_sales_endpoint(payload: SalesPredictRequest):
+    """
+    Model 1: Sales Prediction (Linear Regression).
+    Predicts sales for each future day.
+    """
+    return compute_sales_forecast(payload.history or [], payload.days)
 
 @app.post("/ml/demand/predict")
 def predict_demand_endpoint(payload: DemandPredictRequest):
@@ -252,22 +254,33 @@ def classify_catalog_endpoint(payload: CatalogClassifyRequest):
 def predict_expense_endpoint(payload: ExpensePredictRequest):
     """
     Model 5: Expense Prediction (Multiple Linear Regression).
-    Predicts monthly total business expenses and provides category breakdowns.
+    Predicts total business expenses and provides category breakdowns.
     """
     expenses = payload.history or []
+    days = payload.forecast_days
     months = max(1, payload.forecast_months)
+    
+    if days is not None and days > 0:
+        ratio = days / 30.0
+    else:
+        ratio = float(months)
+        days = int(round(months * 30.0))
     
     amounts = [e.amount for e in expenses if e.amount > 0]
     total_historical = sum(amounts) if amounts else 52000.0
     months_count = len(set(e.date[:7] for e in expenses if e.date)) if expenses else 1
-    monthly_budget = round((total_historical / max(1, months_count)) * months, 2)
+    monthly_rate = total_historical / max(1, months_count)
+    if monthly_rate < 10000 or monthly_rate > 150000:
+        monthly_rate = 52000.0
+        
+    period_budget = round(monthly_rate * ratio, 2)
     
     categories = [
         {
             "category": "Store Rent & Property",
-            "predicted_amount": round(monthly_budget * 0.48, 2),
-            "interval_low": round(monthly_budget * 0.48 * 0.95, 2),
-            "interval_high": round(monthly_budget * 0.48 * 1.05, 2),
+            "predicted_amount": round(period_budget * 0.48, 2),
+            "interval_low": round(period_budget * 0.48 * 0.95, 2),
+            "interval_high": round(period_budget * 0.48 * 1.05, 2),
             "share_pct": 48.0,
             "cost_type": "fixed",
             "method": "Multiple Linear Regression",
@@ -277,9 +290,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
         },
         {
             "category": "Staff Wages & Salaries",
-            "predicted_amount": round(monthly_budget * 0.25, 2),
-            "interval_low": round(monthly_budget * 0.25 * 0.95, 2),
-            "interval_high": round(monthly_budget * 0.25 * 1.05, 2),
+            "predicted_amount": round(period_budget * 0.25, 2),
+            "interval_low": round(period_budget * 0.25 * 0.95, 2),
+            "interval_high": round(period_budget * 0.25 * 1.05, 2),
             "share_pct": 25.0,
             "cost_type": "fixed",
             "method": "Multiple Linear Regression",
@@ -289,9 +302,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
         },
         {
             "category": "Electricity & Utilities",
-            "predicted_amount": round(monthly_budget * 0.12, 2),
-            "interval_low": round(monthly_budget * 0.12 * 0.90, 2),
-            "interval_high": round(monthly_budget * 0.12 * 1.10, 2),
+            "predicted_amount": round(period_budget * 0.12, 2),
+            "interval_low": round(period_budget * 0.12 * 0.90, 2),
+            "interval_high": round(period_budget * 0.12 * 1.10, 2),
             "share_pct": 12.0,
             "cost_type": "variable",
             "method": "Multiple Linear Regression",
@@ -301,9 +314,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
         },
         {
             "category": "Transport & Logistics",
-            "predicted_amount": round(monthly_budget * 0.08, 2),
-            "interval_low": round(monthly_budget * 0.08 * 0.90, 2),
-            "interval_high": round(monthly_budget * 0.08 * 1.10, 2),
+            "predicted_amount": round(period_budget * 0.08, 2),
+            "interval_low": round(period_budget * 0.08 * 0.90, 2),
+            "interval_high": round(period_budget * 0.08 * 1.10, 2),
             "share_pct": 8.0,
             "cost_type": "variable",
             "method": "Multiple Linear Regression",
@@ -313,9 +326,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
         },
         {
             "category": "Software & Internet",
-            "predicted_amount": round(monthly_budget * 0.04, 2),
-            "interval_low": round(monthly_budget * 0.04 * 0.98, 2),
-            "interval_high": round(monthly_budget * 0.04 * 1.02, 2),
+            "predicted_amount": round(period_budget * 0.04, 2),
+            "interval_low": round(period_budget * 0.04 * 0.98, 2),
+            "interval_high": round(period_budget * 0.04 * 1.02, 2),
             "share_pct": 4.0,
             "cost_type": "fixed",
             "method": "Multiple Linear Regression",
@@ -325,9 +338,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
         },
         {
             "category": "Maintenance & Miscellaneous",
-            "predicted_amount": round(monthly_budget * 0.03, 2),
-            "interval_low": round(monthly_budget * 0.03 * 0.85, 2),
-            "interval_high": round(monthly_budget * 0.03 * 1.15, 2),
+            "predicted_amount": round(period_budget * 0.03, 2),
+            "interval_low": round(period_budget * 0.03 * 0.85, 2),
+            "interval_high": round(period_budget * 0.03 * 1.15, 2),
             "share_pct": 3.0,
             "cost_type": "variable",
             "method": "Multiple Linear Regression",
@@ -340,8 +353,9 @@ def predict_expense_endpoint(payload: ExpensePredictRequest):
     return {
         "status": "success",
         "method": "Multiple Linear Regression (Lab Model 5)",
-        "total_predicted_expense": monthly_budget,
+        "total_predicted_expense": period_budget,
         "forecast_months": months,
+        "forecast_days": days,
         "category_breakdown": categories,
         "model_info": {
             "method": "Multiple Linear Regression",
@@ -405,21 +419,9 @@ def get_executive_insights_endpoint(payload: ExecutiveInsightsRequest):
     expenses = payload.expenses or []
     sales_history = payload.sales_history or []
     
-    # 1. Sales Prediction from actual invoice history if available
-    amounts = [h.amount for h in sales_history if h.amount > 0]
-    if len(amounts) >= 7:
-        prev_sales = float(amounts[-1])
-        avg_7d = float(np.mean(amounts[-7:]))
-        avg_30d = float(np.mean(amounts[-30:]))
-    else:
-        prev_sales = 9000.0
-        avg_7d = 8800.0
-        avg_30d = 8500.0
-        
-    invoices_est = max(10, int(prev_sales / 115))
-    qty_est = int(invoices_est * 3.8)
-    daily_sales_pred = predict_sales_revenue(prev_sales, avg_7d, avg_30d, invoices_est, qty_est, discount=5.0)
-    expected_revenue = round(daily_sales_pred * forecast_days, 2)
+    # 1. Sales Prediction matching Model 1 unified forecast
+    sales_res = compute_sales_forecast(sales_history, forecast_days)
+    expected_revenue = sales_res["total_forecasted_sales"]
     
     # 2. Operating Overhead Expense from actual recorded expenses
     exp_amounts = [e.amount for e in expenses if e.amount > 0]
@@ -444,10 +446,6 @@ def get_executive_insights_endpoint(payload: ExecutiveInsightsRequest):
     
     # 4. Net Profit & Margin
     net_profit = round(expected_gross_profit - expected_expense, 2)
-    if net_profit <= 0:
-        net_profit = round(expected_revenue * 0.065, 2)
-        expected_expense = round(expected_gross_profit - net_profit, 2)
-        
     profit_margin_pct = round((net_profit / max(expected_revenue, 1.0)) * 100, 1)
     
     # 5. Inventory & Stockout Analysis

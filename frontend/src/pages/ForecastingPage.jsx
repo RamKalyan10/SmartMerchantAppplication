@@ -813,7 +813,7 @@ export default function ForecastingPage({ setActiveTab }) {
             <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Projected Spend by Category — next {expenseData.expense_forecast.forecast_months || 1} month
+                  Projected Spend by Category — next {expenseData.expense_forecast.forecast_days ? `${expenseData.expense_forecast.forecast_days} days` : `${expenseData.expense_forecast.forecast_months || 1} month`}
                 </h3>
                 <div className="text-xs font-mono font-extrabold text-rose-600 dark:text-rose-400">
                   Total {formatCurrency(expenseData.expense_forecast.total_predicted_expense)}

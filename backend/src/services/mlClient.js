@@ -1,6 +1,13 @@
 const axios = require('axios');
 
-const ML_BASE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+function normalizeMlUrl(rawUrl) {
+  const trimmed = (rawUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `http://${trimmed}`;
+}
+
+const ML_BASE_URL = normalizeMlUrl(process.env.ML_SERVICE_URL);
+const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS || '45000', 10);
 
 /**
  * Client for the Python ML service.
@@ -36,7 +43,7 @@ class MLClient {
   constructor() {
     this.client = axios.create({
       baseURL: ML_BASE_URL,
-      timeout: 15000,
+      timeout: ML_TIMEOUT_MS,
       headers: { 'Content-Type': 'application/json' }
     });
   }

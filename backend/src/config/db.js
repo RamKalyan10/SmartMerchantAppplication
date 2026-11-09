@@ -12,6 +12,8 @@ if (!fs.existsSync(DATA_DIR)) {
 
 class DatabaseStore {
   constructor() {
+    this._pgColumnsCache = new Map();
+    this._syncingAll = false;
     this.data = {
       users: [],
       products: [],
@@ -33,7 +35,10 @@ class DatabaseStore {
   load() {
     try {
       if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        let raw = fs.readFileSync(DB_FILE, 'utf-8');
+        if (raw.charCodeAt(0) === 0xFEFF) {
+          raw = raw.slice(1);
+        }
         this.data = { ...this.data, ...JSON.parse(raw) };
       }
     } catch (e) {
@@ -147,15 +152,42 @@ class DatabaseStore {
     };
   }
 
+  async getValidColumns(tableName) {
+    if (this._pgColumnsCache.has(tableName)) {
+      return this._pgColumnsCache.get(tableName);
+    }
+    const pool = pgClient.getPool();
+    if (!pool || !pgClient.isPgConnected()) return new Set();
+
+    const colRes = await pool.query(
+      'SELECT column_name FROM information_schema.columns WHERE table_name = $1',
+      [tableName]
+    );
+    const validCols = new Set(colRes.rows.map(r => r.column_name));
+    if (validCols.size > 0) {
+      this._pgColumnsCache.set(tableName, validCols);
+    }
+    return validCols;
+  }
+
   async syncUpdateToPg(tableName, id, record) {
     try {
       const pool = pgClient.getPool();
       if (!pool || !pgClient.isPgConnected()) return;
-      const keys = Object.keys(record).filter(k => k !== 'id' && (typeof record[k] !== 'object' || record[k] === null));
+      const validCols = await this.getValidColumns(tableName);
+      const keys = Object.keys(record).filter(k =>
+        k !== 'id' &&
+        (validCols.size === 0 || validCols.has(k)) &&
+        (typeof record[k] !== 'object' || record[k] === null || (tableName === 'invoices' && k === 'items'))
+      );
       if (keys.length === 0) return;
 
       const setClauses = keys.map((k, idx) => `"${k}" = $${idx + 1}`).join(', ');
-      const values = keys.map(k => record[k]);
+      const values = keys.map(k =>
+        tableName === 'invoices' && k === 'items' && record[k] !== null && typeof record[k] !== 'string'
+          ? JSON.stringify(record[k])
+          : record[k]
+      );
       values.push(id);
 
       const sql = `UPDATE "${tableName}" SET ${setClauses} WHERE "id" = $${values.length}`;
@@ -180,11 +212,7 @@ class DatabaseStore {
       const pool = pgClient.getPool();
       if (!pool || !pgClient.isPgConnected()) return;
 
-      const colRes = await pool.query(
-        'SELECT column_name FROM information_schema.columns WHERE table_name = $1',
-        [tableName]
-      );
-      const validCols = new Set(colRes.rows.map(r => r.column_name));
+      const validCols = await this.getValidColumns(tableName);
       if (validCols.size === 0) return;
 
       const adaptedRecord = { ...record };
@@ -193,12 +221,19 @@ class DatabaseStore {
         if (!adaptedRecord.logged_by && adaptedRecord.created_by) adaptedRecord.logged_by = adaptedRecord.created_by;
       }
 
-      const keys = Object.keys(adaptedRecord).filter(k => validCols.has(k) && (typeof adaptedRecord[k] !== 'object' || adaptedRecord[k] === null));
+      const keys = Object.keys(adaptedRecord).filter(k =>
+        validCols.has(k) &&
+        (typeof adaptedRecord[k] !== 'object' || adaptedRecord[k] === null || (tableName === 'invoices' && k === 'items'))
+      );
       if (keys.length === 0) return;
       
       const cols = keys.map(k => `"${k}"`).join(', ');
       const placeholders = keys.map((_, idx) => `$${idx + 1}`).join(', ');
-      const values = keys.map(k => adaptedRecord[k]);
+      const values = keys.map(k =>
+        tableName === 'invoices' && k === 'items' && adaptedRecord[k] !== null && typeof adaptedRecord[k] !== 'string'
+          ? JSON.stringify(adaptedRecord[k])
+          : adaptedRecord[k]
+      );
 
       const sql = `INSERT INTO "${tableName}" (${cols}) VALUES (${placeholders}) ON CONFLICT ("id") DO UPDATE SET ${keys.filter(k => k !== 'id').map(k => `"${k}" = EXCLUDED."${k}"`).join(', ') || '"id" = EXCLUDED."id"'}`;
       
@@ -292,6 +327,37 @@ class DatabaseStore {
         }
       }
 
+      // Backfill invoice.items from invoice_items if any loaded invoice has null/empty items
+      const invoicesNeedingItems = (this.data.invoices || []).filter(inv => !Array.isArray(inv.items));
+      if (invoicesNeedingItems.length > 0) {
+        try {
+          const itemsRes = await pool.query('SELECT * FROM "invoice_items"');
+          if (itemsRes.rows && itemsRes.rows.length > 0) {
+            const productCostMap = new Map(
+              (this.data.products || []).map(p => [String(p.id), Number(p.cost_price || 0)])
+            );
+            const itemsByInvoice = new Map();
+            for (const row of itemsRes.rows) {
+              const invId = String(row.invoice_id);
+              if (!itemsByInvoice.has(invId)) itemsByInvoice.set(invId, []);
+              itemsByInvoice.get(invId).push({
+                product_id: row.product_id,
+                product_name: row.product_name,
+                quantity: Number(row.quantity || 0),
+                unit_price: Number(row.unit_price || 0),
+                cost_price: row.product_id ? (productCostMap.get(String(row.product_id)) || 0) : 0,
+                total_amount: Number(row.total_price || 0)
+              });
+            }
+            for (const inv of invoicesNeedingItems) {
+              inv.items = itemsByInvoice.get(String(inv.id)) || [];
+            }
+          }
+        } catch (e) {
+          // invoice_items fallback notice
+        }
+      }
+
       if (loadedAny) {
         this.save();
         console.log('✅ Synchronized and reconciled records from PostgreSQL database.');
@@ -302,10 +368,11 @@ class DatabaseStore {
   }
 
   async syncAllToPostgres() {
-    if (!pgClient.isPgConnected()) return;
+    if (!pgClient.isPgConnected() || this._syncingAll) return;
     const pool = pgClient.getPool();
     if (!pool) return;
 
+    this._syncingAll = true;
     try {
       await pool.query(`
         ALTER TABLE IF EXISTS customers ADD COLUMN IF NOT EXISTS pending_amount NUMERIC(14, 2) DEFAULT 0.00;
@@ -325,8 +392,12 @@ class DatabaseStore {
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS reason TEXT;
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS adjusted_by VARCHAR(255);
       `);
+      this._pgColumnsCache.clear();
 
       const tables = ['users', 'categories', 'suppliers', 'products', 'customers', 'invoices', 'expenses', 'inventory_transactions', 'purchase_orders'];
+      const CHUNK_SIZE = 10;
+      let totalSynced = 0;
+
       for (const t of tables) {
         const records = this.data[t] || [];
         if (records.length === 0) continue;
@@ -338,12 +409,20 @@ class DatabaseStore {
         } catch (e) {}
 
         const missing = records.filter(r => !existingIdSet.has(String(r.id)));
-        for (const rec of missing) {
-          await this.syncInsertToPg(t, rec);
+        for (let i = 0; i < missing.length; i += CHUNK_SIZE) {
+          const chunk = missing.slice(i, i + CHUNK_SIZE);
+          await Promise.all(chunk.map(rec => this.syncInsertToPg(t, rec)));
         }
+        totalSynced += missing.length;
+      }
+
+      if (totalSynced > 0) {
+        console.log(`✅ PostgreSQL background sync complete (${totalSynced} records synced).`);
       }
     } catch (err) {
       console.warn('Sync notice:', err.message);
+    } finally {
+      this._syncingAll = false;
     }
   }
 }

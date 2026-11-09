@@ -1,7 +1,10 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smart_merchant_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is not set. Add it to backend/.env');
+}
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;

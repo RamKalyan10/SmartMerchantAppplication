@@ -14,5 +14,4 @@ if __name__ == "__main__":
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     if cur_dir not in sys.path:
         sys.path.insert(0, cur_dir)
-        
-    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=True)

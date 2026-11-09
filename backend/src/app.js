@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
+const fs = require('fs');
 
 const authRoutes = require('./routes/auth.routes');
 const productRoutes = require('./routes/product.routes');
@@ -39,6 +41,12 @@ app.get('/api/system/db-status', (req, res) => {
   res.json(db.getStatus());
 });
 
+app.post('/api/system/db-reload', (req, res) => {
+  const db = require('./config/db');
+  db.load();
+  res.json({ status: 'OK', message: 'Database reloaded from disk', statusDetails: db.getStatus() });
+});
+
 app.get('/api/system/public-highlights', (req, res) => {
   const db = require('./config/db');
   const invoices = db.table('invoices').find();
@@ -60,6 +68,18 @@ app.get('/api/system/public-highlights', (req, res) => {
     activeTables: status.tables?.length || 12
   });
 });
+
+// Serve built React frontend in production if frontend/dist exists
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
 
 // Global Error Handler
 app.use((err, req, res, next) => {

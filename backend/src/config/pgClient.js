@@ -1,15 +1,30 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Parse PostgreSQL NUMERIC/DECIMAL (OID 1700) as JS numbers instead of strings
+types.setTypeParser(1700, (val) => (val === null ? null : parseFloat(val)));
+
 let pool = null;
 let pgConnected = false;
+let connectedDbName = null;
 let connectionError = null;
 
 function createPgPool() {
   const connectionString = process.env.DATABASE_URL;
+  const isInternalNoSsl =
+    Boolean(connectionString) &&
+    (connectionString.includes('.railway.internal') || connectionString.includes('sslmode=disable'));
+  const sslEnabled =
+    process.env.PGSSL === 'true' ||
+    (process.env.PGSSL !== 'false' && !isInternalNoSsl);
   const config = connectionString
-    ? { connectionString }
+    ? {
+        connectionString,
+        ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000
+      }
     : {
         user: process.env.PGUSER || 'postgres',
         host: process.env.PGHOST || 'localhost',
@@ -30,8 +45,9 @@ async function initPostgres() {
     const client = await pool.connect();
     const res = await client.query('SELECT current_database(), version()');
     pgConnected = true;
+    connectedDbName = res.rows[0].current_database;
     connectionError = null;
-    console.log(`✅ PostgreSQL Connected to database [${res.rows[0].current_database}]`);
+    console.log(`✅ PostgreSQL Connected to database [${connectedDbName}]`);
     
     // Execute DDL Schema automatically to create all tables
     const schemaSqlPath = path.join(__dirname, 'schema.sql');
@@ -62,12 +78,13 @@ function getPgStatus() {
   return {
     connected: pgConnected,
     engine: pgConnected ? 'PostgreSQL' : 'Embedded JSON Store (Fast Local Engine)',
-    database: pgConnected ? (process.env.PGDATABASE || 'smart_merchant') : 'merchant_db.json',
+    database: pgConnected ? (connectedDbName || process.env.PGDATABASE || 'smart_merchant') : 'merchant_db.json',
     error: connectionError
   };
 }
 
 module.exports = {
+  createPgPool,
   initPostgres,
   getPool,
   isPgConnected,

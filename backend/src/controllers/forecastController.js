@@ -355,10 +355,13 @@ exports.getExpenseForecastAndAnomalies = async (req, res) => {
       });
     }
 
-    const payload = { history: expenses, forecast_months: forecastMonths, store_id: storeId };
+    const payload = {
+      history: expenses,
+      forecast_months: forecastMonths,
+      forecast_days: forecastDays,
+      store_id: storeId
+    };
     const [forecastRes, anomaliesRes] = await Promise.all([
-      // The model forecasts per month; sending `forecast_days` was silently
-      // ignored, so the reported total was always a one-month figure.
       mlClient.predictExpenses(payload),
       mlClient.detectExpenseAnomalies({
         expenses,

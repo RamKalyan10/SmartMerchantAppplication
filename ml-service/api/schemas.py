@@ -63,6 +63,7 @@ class ExpenseItem(BaseModel):
 class ExpensePredictRequest(BaseModel):
     history: List[ExpenseItem] = Field(default_factory=list)
     forecast_months: int = 1
+    forecast_days: Optional[int] = None
     store_id: Optional[str] = None
 
 class ExpenseAnomalyRequest(BaseModel):
