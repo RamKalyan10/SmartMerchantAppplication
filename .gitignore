@@ -33,7 +33,8 @@ backend/src/scripts/scratch*
 
 # ─── Database & Persistent Data ──────────────────────────────────────────────
 backend/data/
-ml-service/data/
+ml-service/data/*.csv
+!ml-service/data/*.py
 *.sqlite
 *.sqlite3
 *.db
