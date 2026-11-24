@@ -219,10 +219,20 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
 .animate-fade-in       { animation: fadeIn 0.4s ease-out both; }
 .animate-fade-in-up    { animation: fadeInUp 0.6s ease-out both; }
 .animate-scale-in      { animation: scaleIn 0.5s ease-out both; }
+.animate-slide-up      { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-right   { animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-float         { animation: float 6s ease-in-out infinite; }
 .animate-float-slow    { animation: float 9s ease-in-out infinite; }
 .animate-pulse-slow    { animation: pulse-slow 4s ease-in-out infinite; }

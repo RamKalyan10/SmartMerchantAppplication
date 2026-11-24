@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Users, Plus, Search, Phone, Mail, MapPin, Eye, X, RefreshCw, Image, Sparkles, Send, TrendingUp, ShoppingBag, ShoppingCart, Copy, Check, FileText, Clock, User } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 import ImageUploadPicker from '../components/ImageUploadPicker';
 
 const CUSTOMER_PRESET_AVATARS = [
@@ -14,6 +15,7 @@ const CUSTOMER_PRESET_AVATARS = [
 ];
 
 export default function CustomersPage({ quickActionTrigger, isNewModalOpen: propIsNewModalOpen, onConsumeQuickAction }) {
+  const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,9 +77,10 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
       setEmail('');
       setAddress('');
       setAvatar('');
+      toast.success('New customer profile saved successfully!');
       fetchCustomers();
     } catch (err) {
-      alert('Error creating customer in database');
+      toast.error('Error creating customer in database');
     }
   };
 
@@ -117,8 +120,9 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
       }
       // Refresh customer list in background
       fetchCustomers();
+      toast.success('Invoice marked as Paid! Ledger updated.');
     } catch (err) {
-      alert('Failed to update invoice payment status: ' + (err.response?.data?.message || err.message));
+      toast.error('Failed to update invoice payment status: ' + (err.response?.data?.message || err.message));
     } finally {
       setMarkingPaidId(null);
     }
@@ -251,6 +255,7 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
           const copyCustomerId = (id) => {
             navigator.clipboard?.writeText(id);
             setCopiedId(id);
+            toast.success(`Copied customer ID: ${id}`);
             setTimeout(() => setCopiedId(null), 2000);
           };
 

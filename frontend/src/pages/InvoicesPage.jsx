@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Receipt, 
@@ -39,10 +39,13 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import VoicePOSButton from '../components/VoicePOSButton';
 
 export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickActionTrigger, onConsumeQuickAction }) {
   const { user } = useAuth();
+  const toast = useToast();
+  const searchInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'history'
   const [invoices, setInvoices] = useState([]);
   const [products, setProducts] = useState([]);
@@ -275,11 +278,33 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
   const grandTotal = taxable + taxAmt;
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Keyboard Shortcuts for High-Speed POS Checkout
+  useEffect(() => {
+    const handlePOSShortcuts = (e) => {
+      // Don't intercept if user is inside a modal or viewing history
+      if (activeTab !== 'pos' || selectedInvoice || saleSuccess) return;
+
+      // F2 or Ctrl+Enter -> Complete Sale / Checkout
+      if (e.key === 'F2' || ((e.ctrlKey || e.metaKey) && e.key === 'Enter')) {
+        e.preventDefault();
+        handleCheckout();
+      }
+      // '/' key when not already focused in an input -> Focus Catalog Search
+      else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handlePOSShortcuts);
+    return () => window.removeEventListener('keydown', handlePOSShortcuts);
+  }, [activeTab, selectedInvoice, saleSuccess, cart, grandTotal, customerName, selectedCustomerId, paymentMethod, checkoutStatus]);
+
   // Complete Checkout / Sale
   const handleCheckout = async (e) => {
     e?.preventDefault();
     if (cart.length === 0) {
-      alert('Cart is empty. Please add items from the catalog first.');
+      toast.error('Cart is empty. Click or scan products to add them to billing.');
       return;
     }
 
@@ -318,13 +343,14 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
         created_at: new Date().toISOString()
       };
 
+      toast.success(`Invoice ${created.invoice_number} created! ₹${Number(grandTotal).toLocaleString('en-IN')}`);
       setSaleSuccess(created);
       clearCart();
       setWalkInCustomer();
       fetchData();
     } catch (err) {
       console.error('Invoice creation error:', err);
-      alert(err.response?.data?.message || 'Error processing sale in database');
+      toast.error(err.response?.data?.message || 'Error processing sale in database');
     } finally {
       setSaving(false);
     }
@@ -503,12 +529,16 @@ export default function InvoicesPage({ isNewModalOpen, setIsNewModalOpen, quickA
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    ref={searchInputRef}
                     type="text"
-                    placeholder="Quick scan or search product name, SKU, barcode..."
+                    placeholder="Quick scan or search product name, SKU, barcode... (Press / to focus)"
                     value={catalogSearch}
                     onChange={(e) => setCatalogSearch(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 transition-all font-medium"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-10 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 transition-all font-medium"
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold bg-white dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded shadow-2xs pointer-events-none">
+                    /
+                  </span>
                 </div>
                 {/* Voice POS Button */}
                 <VoicePOSButton

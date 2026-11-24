@@ -471,19 +471,81 @@ export default function DashboardPage({ setActiveTab, onOpenNewInvoice }) {
         </div>
       </div>
 
-      {/* 2. Top 4 Stat Cards Grid */}
+      {/* 2. Interactive Quick Action Dock */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          onClick={onOpenNewInvoice}
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white shadow-md shadow-brand-600/25 transition-all hover:scale-[1.02] active:scale-[0.98] text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <Receipt className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-extrabold text-xs">New Bill / POS</div>
+            <div className="text-[10px] text-indigo-100">Instant counter checkout</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('products')}
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600/50 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] text-left cursor-pointer"
+        >
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white">Inventory & Stock</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">View 88 store items</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('customers')}
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600/50 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] text-left cursor-pointer"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white">Khata Customers</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">Credit ledger & history</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600/50 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] text-left cursor-pointer"
+        >
+          <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <BarChart3 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white">Sales Analytics</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">Revenue & margins</div>
+          </div>
+        </button>
+      </div>
+
+      {/* 3. Top 4 Stat Cards Grid (Interactive Shortcuts) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: Total Revenue */}
-        <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm relative overflow-hidden">
+        {/* Card 1: Total Revenue -> Jump to Invoices */}
+        <div 
+          onClick={() => setActiveTab('invoices')}
+          className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600/60 bg-white dark:bg-slate-900/80 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          title="Click to view all store invoices & billing"
+        >
           <div className="flex items-start justify-between">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-lg">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-lg group-hover:scale-105 transition-transform">
               ₹
             </div>
             <ChangeBadge value={overview?.revenue_change_pct} />
           </div>
           <div className="mt-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Revenue</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+              <span>Total Revenue</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+            </p>
             <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">
               {formatCurrency(overview?.period_revenue ?? overview?.total_revenue ?? 0)}
             </h3>
@@ -499,16 +561,23 @@ export default function DashboardPage({ setActiveTab, onOpenNewInvoice }) {
           </div>
         </div>
 
-        {/* Card 2: Total Expenses */}
-        <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm relative overflow-hidden">
+        {/* Card 2: Total Expenses -> Jump to Expenses */}
+        <div 
+          onClick={() => setActiveTab('expenses')}
+          className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-rose-400 dark:hover:border-rose-600/60 bg-white dark:bg-slate-900/80 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          title="Click to view operating expense ledger"
+        >
           <div className="flex items-start justify-between">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <ChangeBadge value={overview?.expense_change_pct} invert />
           </div>
           <div className="mt-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Expenses</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+              <span>Total Expenses</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-500 group-hover:translate-x-0.5 transition-all" />
+            </p>
             <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">
               {formatCurrency(overview?.period_expense ?? overview?.total_expense ?? 0)}
             </h3>
@@ -522,16 +591,23 @@ export default function DashboardPage({ setActiveTab, onOpenNewInvoice }) {
           </div>
         </div>
 
-        {/* Card 3: Net Profit */}
-        <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm relative overflow-hidden">
+        {/* Card 3: Net Profit -> Jump to Analytics */}
+        <div 
+          onClick={() => setActiveTab('analytics')}
+          className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600/60 bg-white dark:bg-slate-900/80 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          title="Click to view deep financial analytics"
+        >
           <div className="flex items-start justify-between">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
               <BarChart3 className="w-5 h-5" />
             </div>
             <ChangeBadge value={overview?.profit_change_pct} />
           </div>
           <div className="mt-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Net Profit</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between">
+              <span>Net Profit</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+            </p>
             <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">
               {formatCurrency(overview?.period_net_profit ?? overview?.net_profit ?? 0)}
             </h3>
@@ -561,10 +637,14 @@ export default function DashboardPage({ setActiveTab, onOpenNewInvoice }) {
           </div>
         </div>
 
-        {/* Card 4: Stockout Risk Items */}
-        <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm relative overflow-hidden">
+        {/* Card 4: Stockout Risk Items -> Jump to Products */}
+        <div 
+          onClick={() => setActiveTab('products')}
+          className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600/60 bg-white dark:bg-slate-900/80 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          title="Click to view product inventory and low stock items"
+        >
           <div className="flex items-start justify-between">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Package className="w-5 h-5" />
             </div>
             {Number.isFinite(Number(overview?.low_stock_alerts)) ? (

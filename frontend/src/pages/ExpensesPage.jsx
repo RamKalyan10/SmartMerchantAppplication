@@ -38,6 +38,7 @@ import {
   Tooltip 
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const CATEGORY_ICONS = {
   'Rent': Home,
@@ -61,6 +62,7 @@ const CATEGORY_COLORS = {
 
 export default function ExpensesPage({ quickActionTrigger, isNewModalOpen: propIsNewModalOpen, onConsumeQuickAction, setActiveTab }) {
   const { hasPermission } = useAuth();
+  const toast = useToast();
   const [expenses, setExpenses] = useState([]);
   const [totalExpense, setTotalExpense] = useState(0);
   const [allTimeTotal, setAllTimeTotal] = useState(0);
@@ -144,9 +146,10 @@ export default function ExpensesPage({ quickActionTrigger, isNewModalOpen: propI
       setIsModalOpen(false);
       setAmount('');
       setDescription('');
+      toast.success('Expense recorded successfully!');
       fetchExpenses(timeFilter, selectedCategory);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error recording expense in database');
+      toast.error(err.response?.data?.message || 'Error recording expense in database');
     }
   };
 
@@ -154,9 +157,10 @@ export default function ExpensesPage({ quickActionTrigger, isNewModalOpen: propI
     if (!confirm('Are you sure you want to delete this expense from the database?')) return;
     try {
       await api.delete(`/expenses/${id}`);
+      toast.success('Expense entry removed.');
       fetchExpenses(timeFilter, selectedCategory);
     } catch (err) {
-      alert('Error deleting expense');
+      toast.error('Error deleting expense');
     }
   };
 

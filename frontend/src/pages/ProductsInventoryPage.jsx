@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import ImageUploadPicker from '../components/ImageUploadPicker';
 
 const PRODUCT_PRESETS = [
@@ -125,6 +126,7 @@ export default function ProductsInventoryPage({
   onConsumeQuickAction 
 }) {
   const { hasPermission } = useAuth();
+  const toast = useToast();
 
   // Active top-level subtab: 'catalog' | 'inventory' | 'audit' | 'purchase-orders'
   const [activeSubTab, setActiveSubTab] = useState(initialSubTab || 'catalog');
@@ -296,14 +298,16 @@ export default function ProductsInventoryPage({
     try {
       if (editingProduct) {
         await api.put(`/products/${editingProduct.id}`, productFormData);
+        toast.success(`Product "${productFormData.name}" updated!`);
       } else {
         await api.post('/products', productFormData);
+        toast.success(`Product "${productFormData.name}" created!`);
       }
       setIsProductModalOpen(false);
       setEditingProduct(null);
       fetchAllData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error saving product to database');
+      toast.error(err.response?.data?.message || 'Error saving product to database');
     }
   };
 
@@ -311,9 +315,10 @@ export default function ProductsInventoryPage({
     if (!confirm('Are you sure you want to delete this product from the database?')) return;
     try {
       await api.delete(`/products/${id}`);
+      toast.success('Product deleted from inventory.');
       fetchAllData();
     } catch (err) {
-      alert('Error deleting product');
+      toast.error('Error deleting product');
     }
   };
 
@@ -331,6 +336,7 @@ export default function ProductsInventoryPage({
       const res = await api.post('/products/categories', categoryFormData);
       setIsCategoryModalOpen(false);
       setCategoryFormData({ name: '', code: '', description: '' });
+      toast.success(`Category "${categoryFormData.name}" created!`);
       await fetchAllData();
       if (res.data?.category?.id) {
         setSelectedCategory(res.data.category.id);
@@ -339,7 +345,7 @@ export default function ProductsInventoryPage({
         }
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Error creating category in database');
+      toast.error(err.response?.data?.message || 'Error creating category in database');
     } finally {
       setCategorySaving(false);
     }
@@ -356,9 +362,10 @@ export default function ProductsInventoryPage({
       if (selectedCategory === cat.id) {
         setSelectedCategory('');
       }
+      toast.success(`Category "${cat.name}" deleted.`);
       await fetchAllData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error deleting category');
+      toast.error(err.response?.data?.message || 'Error deleting category');
     } finally {
       setCategoryDeleting(null);
     }
@@ -367,6 +374,7 @@ export default function ProductsInventoryPage({
   const handleCopySku = (sku) => {
     navigator.clipboard.writeText(sku);
     setCopiedSku(sku);
+    toast.success(`Copied SKU: ${sku}`);
     setTimeout(() => setCopiedSku(null), 2000);
   };
 
@@ -392,9 +400,9 @@ export default function ProductsInventoryPage({
       });
       setIsAdjustModalOpen(false);
       fetchAllData();
-      alert(`Stock for ${selectedAdjustProduct.name} updated successfully in database!`);
+      toast.success(`Stock for ${selectedAdjustProduct.name} updated to database!`);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error adjusting stock in database');
+      toast.error(err.response?.data?.message || 'Error adjusting stock in database');
     } finally {
       setAdjustSaving(false);
     }
@@ -416,13 +424,17 @@ export default function ProductsInventoryPage({
     setPoMessage(null);
     try {
       const res = await api.post(`/inventory/purchase-orders/${order.id}/receive`);
-      setPoMessage({ ok: true, message: res.data?.message || `${order.id} received.` });
+      const msg = res.data?.message || `${order.id} received into inventory.`;
+      setPoMessage({ ok: true, message: msg });
+      toast.success(msg);
       fetchAllData();
     } catch (err) {
+      const errMsg = err.response?.data?.message || `Could not receive ${order.id}.`;
       setPoMessage({
         ok: false,
-        message: err.response?.data?.message || `Could not receive ${order.id}.`
+        message: errMsg
       });
+      toast.error(errMsg);
     } finally {
       setReceivingPoId(null);
     }
