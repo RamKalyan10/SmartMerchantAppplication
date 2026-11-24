@@ -20,7 +20,8 @@ import {
   Package,
   Users,
   Truck,
-  Wallet
+  Wallet,
+  Menu
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
@@ -37,13 +38,34 @@ const PROFILE_PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
 ];
 
-export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
+export default function Navbar({ 
+  activeTab = 'dashboard', 
+  onOpenNewInvoice, 
+  onQuickAction, 
+  onOpenCommandPalette, 
+  onToggleMobileMenu 
+}) {
   const { user, isAuthenticated, logout, openAuth, updateProfile } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [quickDropdownOpen, setQuickDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState('all'); // 'all' | 'unread' | 'alerts'
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
+  const pageTitles = {
+    dashboard: 'Dashboard Overview',
+    invoices: 'Point of Sale (POS) & Invoices',
+    products: 'Products & Inventory',
+    inventory: 'Stock Inventory',
+    customers: 'Customers & Khata',
+    suppliers: 'Suppliers Directory',
+    expenses: 'Expense Tracker',
+    analytics: 'Sales & BI Analytics',
+    forecasting: 'AI Demand Forecast',
+    staff: 'Staff & Roles (RBAC)',
+    settings: 'Store Settings',
+    help: 'Help & Shortcuts'
+  };
 
   // Live Notifications State
   //
@@ -174,23 +196,44 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
   });
 
   return (
-    <header className={`h-16 border-b px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 transition-all duration-300 ${
+    <header className={`h-16 border-b px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 transition-all duration-300 ${
       isAuthenticated
         ? 'border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0F172A]/70 backdrop-blur-md'
         : 'border-white/10 bg-black/20 backdrop-blur-xl'
     }`}>
       
-      {/* Left Area: Search Bar if Authenticated / Platform Brand if Guest */}
+      {/* Left Area: Mobile Menu Toggle, Breadcrumb & Quick Search Palette */}
       {isAuthenticated ? (
-        <div className="flex items-center space-x-4 w-72 sm:w-80 lg:w-[420px]">
-          <div className="relative w-full">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search products, invoices, customers, suppliers..."
-              className="w-full bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-10 pr-14 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-            />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold bg-white dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded shadow-2xs pointer-events-none">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+          {/* Mobile Hamburger Button */}
+          {onToggleMobileMenu && (
+            <button
+              onClick={onToggleMobileMenu}
+              className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Current Page Context Badge */}
+          <div className="hidden xl:flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 mr-2 shrink-0">
+            <span className="font-medium text-slate-400">Store</span>
+            <span className="text-slate-300 dark:text-slate-600">/</span>
+            <span className="text-slate-900 dark:text-white font-extrabold">{pageTitles[activeTab] || 'Overview'}</span>
+          </div>
+
+          {/* Command Palette Trigger Input */}
+          <div 
+            onClick={onOpenCommandPalette}
+            className="flex items-center cursor-pointer w-44 sm:w-64 md:w-72 lg:w-80 bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl px-3 py-2 text-xs text-slate-400 transition-all shadow-xs group shrink-0"
+            title="Click or press Ctrl+K to open Quick Command Search"
+          >
+            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 mr-2 shrink-0 transition-colors" />
+            <span className="truncate flex-1 text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
+              Search pages, POS, items...
+            </span>
+            <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] font-mono font-bold bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded shadow-2xs shrink-0 group-hover:border-indigo-400">
               Ctrl K
             </span>
           </div>

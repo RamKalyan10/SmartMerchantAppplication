@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
+import CommandPalette from './components/CommandPalette';
 import LandingHeroSection from './components/LandingHeroSection';
 
 import DashboardPage from './pages/DashboardPage';
@@ -18,10 +19,33 @@ import StaffPage from './pages/StaffPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpSupportPage from './pages/HelpSupportPage';
 
+import { 
+  Receipt, 
+  Package, 
+  Users, 
+  LayoutDashboard, 
+  Menu 
+} from 'lucide-react';
+
 function AppContent() {
   const { user, isAuthenticated, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState(() => (user?.role === 'Staff' ? 'invoices' : 'dashboard'));
   const [quickActionTrigger, setQuickActionTrigger] = useState(null);
+
+  // Navigation UI State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sm_sidebar_collapsed') === 'true';
+  });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sm_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // Auto-route Staff to invoices if they attempt to load restricted tabs
   useEffect(() => {
@@ -83,16 +107,29 @@ function AppContent() {
       
       {/* Show Sidebar only when authenticated */}
       {isAuthenticated && (
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={toggleSidebarCollapse}
+          isMobileOpen={isMobileMenuOpen}
+          setIsMobileOpen={setIsMobileMenuOpen}
+        />
       )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <Navbar onOpenNewInvoice={() => handleQuickAction('invoices')} onQuickAction={handleQuickAction} />
+        <Navbar 
+          activeTab={activeTab}
+          onOpenNewInvoice={() => handleQuickAction('invoices')} 
+          onQuickAction={handleQuickAction}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
+        />
 
-        {/* Page Body Viewport - full width with max-w-[1720px] */}
-        <main className={`flex-1 overflow-y-auto ${isAuthenticated ? 'p-4 sm:p-6 lg:p-8 space-y-6' : ''}`}>
+        {/* Page Body Viewport - with bottom padding on mobile for bottom bar */}
+        <main className={`flex-1 overflow-y-auto ${isAuthenticated ? 'p-3 sm:p-5 lg:p-7 space-y-6 pb-20 md:pb-6' : ''}`}>
           <div className={isAuthenticated ? 'w-full max-w-[1720px] mx-auto' : 'w-full'}>
             {isAuthenticated ? (
               renderActivePage()
@@ -101,7 +138,79 @@ function AppContent() {
             )}
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation Bar (Screens < md) */}
+        {isAuthenticated && (
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-2 z-30 shadow-lg">
+            <button
+              onClick={() => setActiveTab(user?.role === 'Staff' ? 'invoices' : 'dashboard')}
+              className={`flex flex-col items-center justify-center w-16 py-1 cursor-pointer transition-colors ${
+                (activeTab === 'dashboard' || (user?.role === 'Staff' && activeTab === 'invoices'))
+                  ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">{user?.role === 'Staff' ? 'POS' : 'Home'}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`flex flex-col items-center justify-center w-16 py-1 cursor-pointer transition-colors ${
+                activeTab === 'invoices'
+                  ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <Receipt className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Billing</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`flex flex-col items-center justify-center w-16 py-1 cursor-pointer transition-colors ${
+                (activeTab === 'products' || activeTab === 'inventory')
+                  ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <Package className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Stock</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`flex flex-col items-center justify-center w-16 py-1 cursor-pointer transition-colors ${
+                activeTab === 'customers'
+                  ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <Users className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Khata</span>
+            </button>
+
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex flex-col items-center justify-center w-16 py-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 cursor-pointer"
+            >
+              <Menu className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">More</span>
+            </button>
+          </nav>
+        )}
       </div>
+
+      {/* Global Command Palette (Ctrl+K) */}
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(tabId, forceOpen) => {
+          if (forceOpen) setIsCommandPaletteOpen(true);
+          else if (tabId) setActiveTab(tabId);
+        }}
+        onQuickAction={handleQuickAction}
+      />
 
       {/* Authentication Modal */}
       <AuthModal />
