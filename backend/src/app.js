@@ -32,6 +32,18 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/forecast', forecastRoutes);
 
+// Root Welcome & Health Check
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Smart Merchant Backend API',
+    status: 'Online & Operational',
+    environment: process.env.NODE_ENV || 'production',
+    health: '/api/health',
+    dbStatus: '/api/system/db-status',
+    message: 'Backend server is active and connected to Supabase PostgreSQL. Access the user interface through your deployed Vercel frontend.'
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Smart Merchant Backend API is operational' });
 });
