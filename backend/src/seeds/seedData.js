@@ -731,4 +731,11 @@ async function seedDatabase(options = {}) {
   console.log('========================================================');
 }
 
-module.exports = { seedDatabase };
+module.exports = { 
+  seedDatabase,
+  CATEGORIES_MASTER,
+  SUPPLIERS_MASTER,
+  CUSTOMERS_MASTER,
+  PRODUCTS_MASTER,
+  FESTIVALS_2026
+};

@@ -381,21 +381,23 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
                         </div>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setQuickDropdownOpen(false);
-                          if (onQuickAction) onQuickAction('products');
-                        }}
-                        className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0">
-                          <Package className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-bold">New Product SKU</div>
-                          <div className="text-[10px] text-slate-400">Add item with photo</div>
-                        </div>
-                      </button>
+                      {(user?.role === 'Owner' || user?.role === 'Admin') && (
+                        <button
+                          onClick={() => {
+                            setQuickDropdownOpen(false);
+                            if (onQuickAction) onQuickAction('products');
+                          }}
+                          className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0">
+                            <Package className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="font-bold">New Product SKU</div>
+                            <div className="text-[10px] text-slate-400">Add item with photo</div>
+                          </div>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {
@@ -413,37 +415,41 @@ export default function Navbar({ onOpenNewInvoice, onQuickAction }) {
                         </div>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setQuickDropdownOpen(false);
-                          if (onQuickAction) onQuickAction('suppliers');
-                        }}
-                        className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
-                          <Truck className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-bold">New Supplier</div>
-                          <div className="text-[10px] text-slate-400">Register vendor</div>
-                        </div>
-                      </button>
+                      {(user?.role === 'Owner' || user?.role === 'Admin' || user?.role === 'Manager') && (
+                        <button
+                          onClick={() => {
+                            setQuickDropdownOpen(false);
+                            if (onQuickAction) onQuickAction('suppliers');
+                          }}
+                          className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
+                            <Truck className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="font-bold">New Supplier</div>
+                            <div className="text-[10px] text-slate-400">Register vendor</div>
+                          </div>
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => {
-                          setQuickDropdownOpen(false);
-                          if (onQuickAction) onQuickAction('expenses');
-                        }}
-                        className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center shrink-0">
-                          <Wallet className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-bold">Record Expense</div>
-                          <div className="text-[10px] text-slate-400">Log store cost</div>
-                        </div>
-                      </button>
+                      {(user?.role === 'Owner' || user?.role === 'Admin' || user?.role === 'Manager') && (
+                        <button
+                          onClick={() => {
+                            setQuickDropdownOpen(false);
+                            if (onQuickAction) onQuickAction('expenses');
+                          }}
+                          className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center shrink-0">
+                            <Wallet className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="font-bold">Record Expense</div>
+                            <div className="text-[10px] text-slate-400">Log store cost</div>
+                          </div>
+                        </button>
+                      )}
 
                       {(user?.role === 'Owner' || user?.role === 'Admin') && (
                         <button

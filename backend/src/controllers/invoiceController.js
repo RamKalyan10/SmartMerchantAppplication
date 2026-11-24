@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-const getStoreId = (req) => req.storeId || req.user?.store_id || 'store_dwdm_001';
+const getStoreId = (req) => req.storeId || req.user?.store_id || (req.user?.id ? `store_${req.user.id}` : null);
 
 const getInvoiceEpoch = (inv) => {
   const dStr = inv.date || (inv.created_at ? inv.created_at.split('T')[0] : '1970-01-01');

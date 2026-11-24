@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Sidebar from './components/Sidebar';
@@ -19,9 +19,16 @@ import SettingsPage from './pages/SettingsPage';
 import HelpSupportPage from './pages/HelpSupportPage';
 
 function AppContent() {
-  const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { user, isAuthenticated, hasPermission } = useAuth();
+  const [activeTab, setActiveTab] = useState(() => (user?.role === 'Staff' ? 'invoices' : 'dashboard'));
   const [quickActionTrigger, setQuickActionTrigger] = useState(null);
+
+  // Auto-route Staff to invoices if they attempt to load restricted tabs
+  useEffect(() => {
+    if (user?.role === 'Staff' && ['dashboard', 'expenses', 'suppliers', 'staff', 'forecasting', 'analytics', 'settings'].includes(activeTab)) {
+      setActiveTab('invoices');
+    }
+  }, [user?.role, activeTab]);
 
   const handleQuickAction = (page) => {
     setActiveTab(page);
@@ -33,6 +40,10 @@ function AppContent() {
   };
 
   const renderActivePage = () => {
+    if (user?.role === 'Staff' && ['dashboard', 'expenses', 'suppliers', 'staff', 'forecasting', 'analytics', 'settings'].includes(activeTab)) {
+      return <InvoicesPage quickActionTrigger={quickActionTrigger} isNewModalOpen={quickActionTrigger?.page === 'invoices'} onConsumeQuickAction={handleQuickActionConsumed} />;
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return <DashboardPage setActiveTab={setActiveTab} onOpenNewInvoice={() => handleQuickAction('invoices')} />;

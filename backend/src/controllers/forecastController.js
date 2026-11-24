@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const mlClient = require('../services/mlClient');
 
-const getStoreId = (req) => req.storeId || req.user?.store_id || 'store_dwdm_001';
+const getStoreId = (req) => req.storeId || req.user?.store_id || (req.user?.id ? `store_${req.user.id}` : null);
 
 const MS_PER_DAY = 86400000;
 const DAYS_PER_MONTH = 30.44;

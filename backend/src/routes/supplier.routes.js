@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
 
 router.use(authMiddleware);
+router.use(requireRole('Manager'));
 
 router.get('/', supplierController.getSuppliers);
 router.get('/:id', supplierController.getSupplierById);

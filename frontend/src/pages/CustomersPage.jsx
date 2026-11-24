@@ -124,7 +124,13 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
     }
   };
 
-  const formatCurrency = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
+  const formatCurrency = (val, decimals = 0) => {
+    const num = Number(val || 0);
+    return `₹${num.toLocaleString('en-IN', {
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals
+    })}`;
+  };
 
   const totalPendingInDirectory = customers.reduce((sum, c) => sum + Number(c.pending_amount || 0), 0);
   const customersWithPendingCount = customers.filter(c => (c.pending_amount || 0) > 0).length;
@@ -235,7 +241,7 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
       </div>
 
       {/* Customer Cards Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((cust) => {
           const lifetimeSpend = cust.total_spent || cust.total_purchases || 0;
           const pendingAmount = cust.pending_amount || 0;
@@ -251,11 +257,11 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
           return (
             <div
               key={cust.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-4 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all duration-300 shadow-sm"
+              className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all duration-300 shadow-sm overflow-hidden"
             >
-              {/* TOP ROW: Avatar with online indicator, Name + Copyable ID, Orders Badge */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3.5 min-w-0">
+              {/* TOP ROW: Avatar, Name + Copyable ID, Orders Badge */}
+              <div className="flex items-start justify-between gap-2.5 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Avatar Circle with Online Dot */}
                   <div className="relative shrink-0">
                     {cust.avatar ? (
@@ -263,161 +269,147 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
                         src={cust.avatar}
                         alt={cust.name}
                         onError={(e) => { e.target.onerror = null; e.target.src = CUSTOMER_PRESET_AVATARS[0]; }}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-700/60 shadow-sm"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-700/60 shadow-sm"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-2 border-indigo-200 dark:border-indigo-700/60 flex items-center justify-center font-black text-xl shadow-inner">
+                      <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-2 border-indigo-200 dark:border-indigo-700/60 flex items-center justify-center font-black text-lg shadow-inner">
                         {cust.name?.charAt(0) || 'C'}
                       </div>
                     )}
                     {/* Green online indicator dot */}
-                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-sm" />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-sm" />
                   </div>
 
                   {/* Name & ID */}
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight truncate leading-tight">
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight truncate leading-tight" title={cust.name}>
                       {cust.name}
                     </h3>
                     <div
                       onClick={() => copyCustomerId(cust.id)}
                       title="Click to copy ID"
-                      className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-mono text-[11px] cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-mono text-[10px] cursor-pointer transition-colors max-w-full truncate"
                     >
-                      <span>ID: {cust.id}</span>
-                      {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                      <span className="truncate">ID: {cust.id}</span>
+                      {isCopied ? <Check className="w-3 h-3 text-emerald-600 shrink-0" /> : <Copy className="w-3 h-3 text-slate-400 shrink-0" />}
                     </div>
                   </div>
                 </div>
 
                 {/* Orders Badge */}
-                <div className="shrink-0 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-2xl font-bold text-xs flex items-center gap-1.5 border border-indigo-100 dark:border-indigo-900/50 shadow-xs">
-                  <ShoppingCart className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <div className="shrink-0 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-xl font-bold text-[10px] sm:text-[11px] flex items-center gap-1 border border-indigo-100 dark:border-indigo-900/50 shadow-xs">
+                  <ShoppingCart className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                   <span>{ordersCount} Orders</span>
                 </div>
               </div>
 
-              {/* MIDDLE ROW: 3-Column Contact Strip with Dividers */}
-              <div className="grid grid-cols-3 gap-2 py-2.5 border-y border-slate-100 dark:border-slate-800/80 text-xs">
-                {/* Phone */}
-                <div className="flex items-center gap-2 min-w-0 pr-2 border-r border-slate-100 dark:border-slate-800">
-                  <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <Phone className="w-3 h-3" />
+              {/* MIDDLE ROW: Clean Structured Contact Card */}
+              <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl p-2.5 border border-slate-100 dark:border-slate-800/80 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between gap-3 text-[11px]">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 text-slate-600 dark:text-slate-300">
+                    <Phone className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <span className="font-mono font-semibold truncate" title={cust.phone}>{cust.phone || '—'}</span>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-slate-400 font-medium leading-none">Phone</div>
-                    <div className="font-bold text-slate-900 dark:text-slate-100 font-mono text-[11px] truncate mt-0.5" title={cust.phone}>
-                      {cust.phone || '—'}
-                    </div>
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end text-slate-600 dark:text-slate-300">
+                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <span className="truncate" title={cust.email}>{cust.email || '—'}</span>
                   </div>
                 </div>
-
-                {/* Email */}
-                <div className="flex items-center gap-2 min-w-0 px-2 border-r border-slate-100 dark:border-slate-800">
-                  <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <Mail className="w-3 h-3" />
+                {cust.address && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-700/50 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span className="truncate" title={cust.address}>{cust.address}</span>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-slate-400 font-medium leading-none">Email</div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] truncate mt-0.5" title={cust.email}>
-                      {cust.email || '—'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-center gap-2 min-w-0 pl-2">
-                  <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <MapPin className="w-3 h-3" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-slate-400 font-medium leading-none">Location</div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] truncate mt-0.5" title={cust.address}>
-                      {cust.address || 'Chennai, IN'}
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* DUAL KPI STATS BOXES */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* DUAL KPI STATS BOXES (Clean non-overlapping vertical layout) */}
+              <div className="grid grid-cols-2 gap-2">
                 {/* Box 1: Lifetime Spend */}
-                <div className="bg-[#edfbf4] dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#d1fae5] dark:bg-emerald-900/50 text-[#059669] dark:text-emerald-400 flex items-center justify-center shrink-0">
-                      <ShoppingBag className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800/70 dark:text-emerald-400">Lifetime Spend</div>
-                      <div className="text-lg sm:text-xl font-black text-[#065f46] dark:text-emerald-300 font-mono tracking-tight leading-tight">
-                        {formatCurrency(lifetimeSpend)}
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                        {ordersCount} orders
-                      </div>
+                <div className="bg-emerald-50/80 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 truncate">
+                      Lifetime Spend
+                    </span>
+                    <div className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <TrendingUp className="w-2.5 h-2.5" />
                     </div>
                   </div>
-                  <div className="text-emerald-500/70 shrink-0">
-                    <TrendingUp className="w-4 h-4" />
+                  <div className="mt-1 min-w-0">
+                    <div
+                      className="text-sm sm:text-base font-black text-emerald-900 dark:text-emerald-300 font-mono tracking-tight truncate leading-tight"
+                      title={formatCurrency(lifetimeSpend, 2)}
+                    >
+                      {formatCurrency(lifetimeSpend, 0)}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                      {ordersCount} orders
+                    </div>
                   </div>
                 </div>
 
                 {/* Box 2: Pending Amount */}
-                <div className="bg-[#fef8ed] dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/40 rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#fef3c7] dark:bg-amber-900/50 text-[#d97706] dark:text-amber-400 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800/70 dark:text-amber-400">Pending Amount</div>
-                      <div className="text-lg sm:text-xl font-black text-[#b45309] dark:text-amber-400 font-mono tracking-tight leading-tight">
-                        {formatCurrency(pendingAmount)}
-                      </div>
-                      <div className="text-[10px] text-[#d97706] dark:text-amber-400 font-bold">
-                        unpaid
-                      </div>
+                <div className={`rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs border min-w-0 ${
+                  pendingAmount > 0
+                    ? 'bg-amber-50/80 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-800/40'
+                    : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider truncate ${
+                      pendingAmount > 0 ? 'text-amber-800 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      Pending Dues
+                    </span>
+                    <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                      pendingAmount > 0
+                        ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                    }`}>
+                      <Clock className="w-2.5 h-2.5" />
                     </div>
                   </div>
-                  <div className="text-amber-500/70 shrink-0">
-                    <Clock className="w-4 h-4" />
+                  <div className="mt-1 min-w-0">
+                    <div
+                      className={`text-sm sm:text-base font-black font-mono tracking-tight truncate leading-tight ${
+                        pendingAmount > 0 ? 'text-amber-900 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'
+                      }`}
+                      title={formatCurrency(pendingAmount, 2)}
+                    >
+                      {formatCurrency(pendingAmount, 0)}
+                    </div>
+                    <div className={`text-[10px] font-medium truncate mt-0.5 ${
+                      pendingAmount > 0 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}>
+                      {pendingAmount > 0 ? 'Unpaid' : 'Cleared ✓'}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* BOTTOM ROW: Active Customer badge on left, Mail + View History buttons on right */}
-              <div className="flex items-center justify-between pt-1">
+              {/* BOTTOM ROW: Active badge on left, Mail + View History buttons on right */}
+              <div className="flex items-center justify-between pt-1 gap-2 min-w-0">
                 {/* Active Customer badge */}
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Active Customer</span>
+                  <span>Active</span>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {cust.email ? (
                     <a
-                      href={`mailto:${cust.email}?subject=Your Purchase Summary - DWDM Store&body=Dear ${cust.name},%0A%0AThank you for being our valued customer! Your lifetime spend is ${formatCurrency(lifetimeSpend)} across ${ordersCount} orders.%0A%0ARegards,%0ADWDM Merchant Store`}
-                      className="border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                      href={`mailto:${cust.email}?subject=Your Purchase Summary - Smart Merchant Store&body=Dear ${cust.name},%0A%0AThank you for being our valued customer! Your lifetime spend is ${formatCurrency(lifetimeSpend, 2)} across ${ordersCount} orders.%0A%0ARegards,%0ASmart Merchant Store`}
+                      className="border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all shadow-xs"
                       title="Send Email"
                     >
                       <Send className="w-3 h-3" />
                       <span>Mail</span>
                     </a>
-                  ) : (
-                    <button
-                      disabled
-                      title="No email recorded"
-                      className="border border-slate-200 dark:border-slate-800 text-slate-400 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 opacity-50 cursor-not-allowed"
-                    >
-                      <Send className="w-3 h-3" />
-                      <span>Mail</span>
-                    </button>
-                  )}
+                  ) : null}
 
                   <button
                     onClick={() => handleViewCustomer(cust)}
-                    className="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     <span>View History</span>
@@ -617,8 +609,8 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
                   const isPending = (inv.payment_status || '').toUpperCase() === 'PENDING' || (inv.payment_status || '').toUpperCase() === 'UNPAID';
                   const isUpdating = markingPaidId === inv.id;
                   const mailSubject = encodeURIComponent(`Invoice ${inv.invoice_number} - Payment Notice`);
-                  const mailBody = encodeURIComponent(`Dear ${selectedCustomer.customer?.name},\n\nThis is a summary for Invoice ${inv.invoice_number} dated ${inv.date} for an amount of ${formatCurrency(inv.total_amount)}.\n\nPayment Status: ${inv.payment_status || 'Paid'}\n\nThank you for choosing DWDM Merchant Store.`);
-                  const waText = encodeURIComponent(`Hi ${selectedCustomer.customer?.name}, reminder regarding Invoice ${inv.invoice_number} of ${formatCurrency(inv.total_amount)} (${inv.payment_status || 'Pending'}). Please clear at your convenience.`);
+                  const mailBody = encodeURIComponent(`Dear ${selectedCustomer.customer?.name},\n\nThis is a summary for Invoice ${inv.invoice_number} dated ${inv.date} for an amount of ${formatCurrency(inv.total_amount, 2)}.\n\nPayment Status: ${inv.payment_status || 'Paid'}\n\nThank you for choosing Smart Merchant Store.`);
+                  const waText = encodeURIComponent(`Hi ${selectedCustomer.customer?.name}, reminder regarding Invoice ${inv.invoice_number} of ${formatCurrency(inv.total_amount, 2)} (${inv.payment_status || 'Pending'}). Please clear at your convenience.`);
 
                   return (
                     <div 

@@ -313,19 +313,19 @@ export default function ForecastingPage({ setActiveTab }) {
               {formatCurrency(insights.expected_gross_profit || insights.predicted_net_profit)}
             </h3>
             <div className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-              <span>Gross Margin: ~{
-                insights.expected_revenue_next_period > 0
-                  ? ((Number(insights.expected_gross_profit || 0) / Number(insights.expected_revenue_next_period)) * 100).toFixed(1)
-                  : ((1 - (Number(insights.model_info?.cogs_ratio) || 0.801)) * 100).toFixed(1)
-              }%</span>
+              <span>Gross Margin: {
+                Number(insights.expected_revenue_next_period || 0) > 0
+                  ? `~${((Number(insights.expected_gross_profit || 0) / Number(insights.expected_revenue_next_period)) * 100).toFixed(1)}%`
+                  : '0.0%'
+              }</span>
               <span className="text-[10px] text-slate-500 font-normal">
                 (Revenue − COGS)
               </span>
             </div>
             <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-              COGS basis: {insights.model_info?.cogs_basis === 'measured_from_invoice_cost_prices'
+              COGS basis: {Number(insights.expected_revenue_next_period || 0) > 0 && insights.model_info?.cogs_basis === 'measured_from_invoice_cost_prices'
                 ? `measured from invoice line items (${(Number(insights.model_info?.cogs_ratio || 0) * 100).toFixed(1)}% of revenue)`
-                : 'assumed default — no line-item costs recorded'}
+                : (Number(insights.expected_revenue_next_period || 0) > 0 ? 'assumed default — no line-item costs recorded' : 'No sales recorded yet')}
             </div>
           </div>
 

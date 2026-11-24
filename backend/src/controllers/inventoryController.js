@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-const getStoreId = (req) => req.storeId || req.user?.store_id || 'store_dwdm_001';
+const getStoreId = (req) => req.storeId || req.user?.store_id || (req.user?.id ? `store_${req.user.id}` : null);
 
 /** Postgres/JSON round-trips can leave this null; subtract from 0 rather than NaN. */
 const stockOf = (p) => {

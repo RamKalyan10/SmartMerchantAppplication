@@ -14,15 +14,7 @@ async function startServer() {
 
     // Hydrate / merge from PostgreSQL if records exist
     await db.loadFromPostgres();
-
-    // Seed initial dataset only if database is newly initialized
-    const existingInvoicesCount = db.table('invoices').find().length;
-    if (existingInvoicesCount === 0) {
-      console.log('Database empty. Seeding initial dataset...');
-      await seedDatabase();
-    } else {
-      console.log(`Database already populated (${existingInvoicesCount} invoices). Skipping reseed.`);
-    }
+    console.log(`Database loaded: ${db.table('invoices').find().length} invoices found.`);
 
     app.listen(PORT, () => {
       console.log(`====================================================`);

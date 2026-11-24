@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const { sendOtpEmail } = require('../services/emailService');
+
+const emailOtpStore = new Map();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is not set. Add it to backend/.env');
@@ -89,6 +92,55 @@ exports.getMe = (req, res) => {
   res.json({ user });
 };
 
+exports.firebaseSync = async (req, res) => {
+  try {
+    const { uid, email, displayName, photoURL, phoneNumber } = req.body || {};
+    if (!uid && !email) {
+      return res.status(400).json({ message: 'UID or email required for sync' });
+    }
+
+    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+    let user = null;
+
+    if (cleanEmail) {
+      user = db.table('users').findOne(u => u.email && u.email.toLowerCase() === cleanEmail);
+    }
+    if (!user && uid) {
+      user = db.table('users').findOne(u => u.id === uid || u.firebase_uid === uid);
+    }
+
+    if (!user) {
+      const newUserId = uid || `usr_${Date.now()}`;
+      const uniqueStoreId = `store_${newUserId}`;
+      const storeName = displayName ? `${displayName}'s Store` : 'My Store';
+      user = db.table('users').insert({
+        id: newUserId,
+        name: displayName || (cleanEmail ? cleanEmail.split('@')[0] : 'Merchant Owner'),
+        email: cleanEmail || `${newUserId}@merchant.local`,
+        role: 'Owner',
+        phone: phoneNumber || '',
+        avatar: photoURL || '',
+        business_name: storeName,
+        store_id: uniqueStoreId
+      });
+    }
+
+    const userStoreId = user.store_id || `store_${user.id}`;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name, store_id: userStoreId },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const userObj = { ...user, store_id: userStoreId };
+    delete userObj.password;
+
+    res.json({ token, user: userObj });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   try {
     const { name, phone, business_name, avatar } = req.body;
@@ -145,13 +197,13 @@ exports.createStaff = async (req, res) => {
 
 exports.deleteStaff = (req, res) => {
   const { id } = req.params;
-  const currentStoreId = req.storeId || req.user?.store_id || req.user?.id || 'store_dwdm_001';
+  const currentStoreId = req.storeId || req.user?.store_id || (req.user?.id ? `store_${req.user.id}` : null);
 
   if (id === req.user?.id) {
     return res.status(400).json({ message: 'Store owners cannot delete their own account from the staff portal.' });
   }
 
-  const staffMember = db.table('users').findOne(u => u.id === id && (u.store_id === currentStoreId || !u.store_id || u.store_id === 'store_dwdm_001'));
+  const staffMember = db.table('users').findOne(u => u.id === id && u.store_id === currentStoreId);
   if (!staffMember) {
     return res.status(404).json({ message: 'Staff member not found in your store directory.' });
   }
@@ -206,4 +258,158 @@ exports.getCapabilities = (req, res) => {
   ];
   defaults.forEach(d => db.table('role_capabilities').insert(d));
   res.json({ capabilities: defaults });
+};
+
+// --- 2-STEP / EMAIL OTP PASSWORD RESET & CHANGE ---
+
+exports.forgotPasswordSendOtp = async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = db.table('users').findOne(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      return res.status(404).json({ message: 'No registered merchant account found with this email address.' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    emailOtpStore.set(`reset_${cleanEmail}`, { otp, expiresAt, attempts: 0 });
+
+    const emailRes = await sendOtpEmail(user.email, otp, 'Password Reset');
+
+    res.json({
+      success: true,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your inbox.`,
+      simulated: !emailRes.delivered
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.forgotPasswordVerifyReset = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body || {};
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Email, 6-digit OTP code, and new password are required.' });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const key = `reset_${cleanEmail}`;
+    const stored = emailOtpStore.get(key);
+
+    if (!stored) {
+      return res.status(400).json({ message: 'No active verification code found. Please request a new code.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      emailOtpStore.delete(key);
+      return res.status(400).json({ message: 'Verification code has expired. Please request a new code.' });
+    }
+
+    if (stored.otp !== String(otp).trim()) {
+      stored.attempts = (stored.attempts || 0) + 1;
+      if (stored.attempts >= 5) {
+        emailOtpStore.delete(key);
+        return res.status(400).json({ message: 'Too many incorrect attempts. Please request a new code.' });
+      }
+      return res.status(400).json({ message: 'Incorrect 6-digit verification code.' });
+    }
+
+    // OTP verified! Update password in database
+    const user = db.table('users').findOne(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found in system.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    db.table('users').update(user.id, { password: hashedPassword });
+    emailOtpStore.delete(key);
+
+    res.json({
+      success: true,
+      message: 'Your password has been successfully reset! You can now log in.'
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.changePasswordSendOtp = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || !user.email) {
+      return res.status(400).json({ message: 'No registered email found on your user profile.' });
+    }
+
+    const cleanEmail = user.email.trim().toLowerCase();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    emailOtpStore.set(`change_${user.id}`, { otp, expiresAt, attempts: 0 });
+
+    const emailRes = await sendOtpEmail(user.email, otp, '2-Step Password Change');
+
+    res.json({
+      success: true,
+      message: `A 6-digit security verification code has been sent to your email (${cleanEmail}). Please check your inbox.`,
+      simulated: !emailRes.delivered
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.changePasswordVerifyChange = async (req, res) => {
+  try {
+    const { otp, newPassword } = req.body || {};
+    if (!otp || !newPassword) {
+      return res.status(400).json({ message: '6-digit OTP code and new password are required.' });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    const key = `change_${req.user.id}`;
+    const stored = emailOtpStore.get(key);
+
+    if (!stored) {
+      return res.status(400).json({ message: 'No active OTP verification code found. Please click Send Security Code first.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      emailOtpStore.delete(key);
+      return res.status(400).json({ message: 'Verification code has expired. Please request a new code.' });
+    }
+
+    if (stored.otp !== String(otp).trim()) {
+      stored.attempts = (stored.attempts || 0) + 1;
+      if (stored.attempts >= 5) {
+        emailOtpStore.delete(key);
+        return res.status(400).json({ message: 'Too many incorrect attempts. Please request a new code.' });
+      }
+      return res.status(400).json({ message: 'Incorrect 6-digit verification code.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    db.table('users').update(req.user.id, { password: hashedPassword });
+    emailOtpStore.delete(key);
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully! Your store account is updated.'
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

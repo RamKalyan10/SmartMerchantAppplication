@@ -170,7 +170,9 @@ export default function ExpensesPage({ quickActionTrigger, isNewModalOpen: propI
     (exp.description && exp.description.toLowerCase().includes('surge'))
   ).length;
 
-  const topExpense = categoryBreakdown.length > 0 ? categoryBreakdown[0] : { category: 'Rent', total: 52500, share_pct: 39.6 };
+  const topExpense = categoryBreakdown.length > 0 
+    ? categoryBreakdown[0] 
+    : { category: 'None', total: 0, share_pct: 0 };
 
   // Donut chart slices
   const pieData = categoryBreakdown.map((cat) => ({

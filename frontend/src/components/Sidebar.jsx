@@ -17,64 +17,67 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
 
   const mainNavItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'invoices', label: 'Invoices & Billing', icon: Receipt, badge: 'POS' },
-    { id: 'products', label: 'Products & Inventory', icon: Package },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'suppliers', label: 'Suppliers', icon: Truck },
-    { id: 'expenses', label: 'Expense Tracker', icon: Wallet },
-    { id: 'staff', label: 'Staff & RBAC', icon: ShieldCheck },
-  ];
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'Manager' },
+    { id: 'invoices', label: 'Invoices & Billing', icon: Receipt, badge: 'POS', minRole: 'Staff' },
+    { id: 'products', label: 'Products & Inventory', icon: Package, minRole: 'Staff' },
+    { id: 'customers', label: 'Customers', icon: Users, minRole: 'Staff' },
+    { id: 'suppliers', label: 'Suppliers', icon: Truck, minRole: 'Manager' },
+    { id: 'expenses', label: 'Expense Tracker', icon: Wallet, minRole: 'Manager' },
+    { id: 'staff', label: 'Staff & RBAC', icon: ShieldCheck, minRole: 'Admin' },
+  ].filter(item => (hasPermission ? hasPermission(item.minRole) : true));
 
   const aiNavItems = [
-    { id: 'forecasting', label: 'AI Forecast & Insights', icon: Sparkles, badge: 'ML' },
-    { id: 'analytics', label: 'Sales & BI Analytics', icon: BarChart3 },
-  ];
+    { id: 'forecasting', label: 'AI Forecast & Insights', icon: Sparkles, badge: 'ML', minRole: 'Admin' },
+    { id: 'analytics', label: 'Sales & BI Analytics', icon: BarChart3, minRole: 'Admin' },
+  ].filter(item => (hasPermission ? hasPermission(item.minRole) : true));
 
   const toolsNavItems = [
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
-  ];
+    { id: 'settings', label: 'Settings', icon: Settings, minRole: 'Admin' },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle, minRole: 'Staff' },
+  ].filter(item => (hasPermission ? hasPermission(item.minRole) : true));
 
-  const renderNavGroup = (title, items) => (
-    <div className="space-y-1">
-      <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-        {title}
+  const renderNavGroup = (title, items) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          {title}
+        </div>
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id || (item.id === 'products' && activeTab === 'inventory');
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                isActive
+                  ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-600/30 font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{item.label}</span>
+              </div>
+              {item.badge && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                  isActive 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/60'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
-      {items.map((item) => {
-        const Icon = item.icon;
-        const isActive = activeTab === item.id || (item.id === 'products' && activeTab === 'inventory');
-        return (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
-              isActive
-                ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-600/30 font-bold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-              <span>{item.label}</span>
-            </div>
-            {item.badge && (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                isActive 
-                  ? 'bg-white/20 text-white' 
-                  : 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/60'
-              }`}>
-                {item.badge}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
+    );
+  };
 
   return (
     <aside className="w-64 bg-white dark:bg-[#0F172A] border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 select-none transition-colors h-screen overflow-y-auto">

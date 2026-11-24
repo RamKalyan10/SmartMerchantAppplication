@@ -426,9 +426,9 @@ export default function StaffPage({ quickActionTrigger, isNewModalOpen: propIsNe
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brand-500"
                   >
-                    <option value="Staff">Staff (Cashier / POS Billing)</option>
-                    <option value="Manager">Manager (Stock & Expenses)</option>
-                    <option value="Admin">Admin (Full Management)</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Admin">Admin</option>
                   </select>
                 </div>
               </div>

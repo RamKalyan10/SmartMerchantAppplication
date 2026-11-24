@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-const getStoreId = (req) => req.storeId || req.user?.store_id || 'store_dwdm_001';
+const getStoreId = (req) => req.storeId || req.user?.store_id || (req.user?.id ? `store_${req.user.id}` : null);
 
 function round2(val) {
   const num = Number(val);

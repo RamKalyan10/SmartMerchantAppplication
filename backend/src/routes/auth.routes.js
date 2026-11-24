@@ -6,6 +6,13 @@ const { requireRole } = require('../middleware/roleMiddleware');
 
 router.post('/login', authController.login);
 router.post('/register', authController.register);
+router.post('/firebase-sync', authController.firebaseSync);
+
+// 2-Step & Email OTP routes
+router.post('/forgot-password/send-otp', authController.forgotPasswordSendOtp);
+router.post('/forgot-password/verify-reset', authController.forgotPasswordVerifyReset);
+router.post('/change-password/send-otp', authMiddleware, authController.changePasswordSendOtp);
+router.post('/change-password/verify-change', authMiddleware, authController.changePasswordVerifyChange);
 router.get('/me', authMiddleware, authController.getMe);
 router.patch('/profile', authMiddleware, authController.updateProfile);
 router.get('/capabilities', authController.getCapabilities);
