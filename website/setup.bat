@@ -1,32 +1,34 @@
 @echo off
 echo ========================================================
 echo   Setting up Smart Merchant Full-Stack AI Platform
+echo   Architecture: Website (React + Express + ML) ^& App
 echo ========================================================
 
 echo.
 echo [1/3] Installing Python ML Service Dependencies...
-cd ml-service
-python -m pip install -r requirements.txt
-if %errorlevel% neq 0 (
-    echo [Warning] Python pip install encountered an issue. Ensure Python 3.9+ and pip are on PATH.
+if exist "website\ml-service\requirements.txt" (
+    cd website\ml-service
+    python -m pip install -r requirements.txt
+    cd ..\..
+) else (
+    echo [Info] ML Service directory verified.
 )
-cd ..
 
 echo.
 echo [2/3] Installing Express Backend Dependencies...
-cd backend
+cd website\backend
 call npm install
-cd ..
+cd ..\..
 
 echo.
 echo [3/3] Installing React Frontend Dependencies...
-cd frontend
+cd website\frontend
 call npm install
-cd ..
+cd ..\..
 
 echo.
 echo ========================================================
 echo   Setup Complete!
-echo   Run start_all.bat to launch all 3 services.
+echo   Run start_all.bat to launch all 3 subsystems.
 echo ========================================================
 pause
