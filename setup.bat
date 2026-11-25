@@ -1,30 +1,30 @@
 @echo off
 echo ========================================================
 echo   Setting up Smart Merchant Full-Stack AI Platform
-echo   Architecture: Website (React + Express + ML) ^& App
+echo   Subsystems: React Frontend, Express Backend, ML Engine
 echo ========================================================
 
 echo.
 echo [1/3] Installing Python ML Service Dependencies...
-if exist "website\ml-service\requirements.txt" (
-    cd website\ml-service
+if exist "ml-service\requirements.txt" (
+    cd ml-service
     python -m pip install -r requirements.txt
-    cd ..\..
+    cd ..
 ) else (
     echo [Info] ML Service directory verified.
 )
 
 echo.
 echo [2/3] Installing Express Backend Dependencies...
-cd website\backend
+cd backend
 call npm install
-cd ..\..
+cd ..
 
 echo.
 echo [3/3] Installing React Frontend Dependencies...
-cd website\frontend
+cd frontend
 call npm install
-cd ..\..
+cd ..
 
 echo.
 echo ========================================================

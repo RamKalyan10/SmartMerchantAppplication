@@ -3,13 +3,13 @@ echo ========================================================
 echo   Launching Smart Merchant Platform (3 Subsystems)
 echo ========================================================
 
-start "Smart Merchant - ML Engine (Port 8000)" cmd /k "cd website\ml-service && python run.py"
+start "Smart Merchant - ML Engine (Port 8000)" cmd /k "cd ml-service && python run.py"
 timeout /t 2 /nobreak >nul
 
-start "Smart Merchant - Express Backend (Port 5000)" cmd /k "cd website\backend && npm start"
+start "Smart Merchant - Express Backend (Port 5000)" cmd /k "cd backend && npm start"
 timeout /t 2 /nobreak >nul
 
-start "Smart Merchant - React Frontend (Port 3000)" cmd /k "cd website\frontend && npm run dev"
+start "Smart Merchant - React Frontend (Port 3000)" cmd /k "cd frontend && npm run dev"
 
 echo.
 echo All 3 services are launching in separate terminal windows:

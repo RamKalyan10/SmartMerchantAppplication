@@ -19,9 +19,9 @@ from datetime import date, datetime, timedelta
 
 # Auto-locate database file across directory structures
 CANDIDATE_PATHS = [
-    os.path.join("website", "backend", "data", "merchant_db.json"),
     os.path.join("backend", "data", "merchant_db.json"),
-    os.path.join("data", "merchant_db.json")
+    os.path.join("data", "merchant_db.json"),
+    os.path.join("website", "backend", "data", "merchant_db.json")
 ]
 
 DB_PATH = next((p for p in CANDIDATE_PATHS if os.path.exists(p)), CANDIDATE_PATHS[0])
