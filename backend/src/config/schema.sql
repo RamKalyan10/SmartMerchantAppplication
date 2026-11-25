@@ -217,6 +217,23 @@ CREATE TABLE IF NOT EXISTS role_capabilities (
     display_order INTEGER DEFAULT 0
 );
 
+-- 12. CUSTOMER INSTALLMENTS & REPAYMENTS
+CREATE TABLE IF NOT EXISTS customer_payments (
+    id VARCHAR(64) PRIMARY KEY,
+    receipt_number VARCHAR(100),
+    store_id VARCHAR(64),
+    customer_id VARCHAR(64) REFERENCES customers(id) ON DELETE CASCADE,
+    customer_name VARCHAR(255),
+    customer_phone VARCHAR(50),
+    amount NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'Cash',
+    payment_date VARCHAR(64),
+    reference_id VARCHAR(100),
+    notes TEXT,
+    allocated_invoices JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for high performance querying
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_supplier ON products(supplier_id);
@@ -226,3 +243,5 @@ CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(created_at);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
 CREATE INDEX IF NOT EXISTS idx_inv_tx_product ON inventory_transactions(product_id);
+CREATE INDEX IF NOT EXISTS idx_cust_payments_customer ON customer_payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_cust_payments_store ON customer_payments(store_id);

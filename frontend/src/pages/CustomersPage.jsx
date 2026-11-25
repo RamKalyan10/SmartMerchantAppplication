@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Users, Plus, Search, Phone, Mail, MapPin, Eye, X, RefreshCw, Image, Sparkles, Send, TrendingUp, ShoppingBag, ShoppingCart, Copy, Check, FileText, Clock, User } from 'lucide-react';
+import { Users, Plus, Search, Phone, Mail, MapPin, Eye, X, RefreshCw, Image, Sparkles, Send, TrendingUp, ShoppingBag, ShoppingCart, Copy, Check, FileText, Clock, User, Wallet, CreditCard, Receipt, CheckCircle2, Calendar, ArrowRight, Share2, History, Banknote } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import ImageUploadPicker from '../components/ImageUploadPicker';
@@ -32,6 +32,18 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
 
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'pending' | 'top'
   const [markingPaidId, setMarkingPaidId] = useState(null);
+
+  // Installment Repayment State
+  const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState(false);
+  const [installmentCustomer, setInstallmentCustomer] = useState(null);
+  const [installmentAmount, setInstallmentAmount] = useState('');
+  const [installmentMethod, setInstallmentMethod] = useState('Cash');
+  const [installmentNotes, setInstallmentNotes] = useState('');
+  const [installmentReference, setInstallmentReference] = useState('');
+  const [installmentInvoiceId, setInstallmentInvoiceId] = useState('');
+  const [submittingInstallment, setSubmittingInstallment] = useState(false);
+  const [completedReceipt, setCompletedReceipt] = useState(null);
+  const [modalTab, setModalTab] = useState('invoices'); // 'invoices' | 'receipts'
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -125,6 +137,72 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
       toast.error('Failed to update invoice payment status: ' + (err.response?.data?.message || err.message));
     } finally {
       setMarkingPaidId(null);
+    }
+  };
+
+  const handleOpenInstallment = (customer, invoice = null) => {
+    setInstallmentCustomer(customer);
+    setInstallmentInvoiceId(invoice ? invoice.id : '');
+    const pendingDue = Number(customer.pending_amount || 0);
+    const invoiceDue = invoice 
+      ? (invoice.balance_due !== undefined ? Number(invoice.balance_due) : Number(invoice.total_amount || 0))
+      : 0;
+
+    let defaultAmt = '';
+    if (invoice && invoiceDue > 0) {
+      defaultAmt = String(invoiceDue);
+    } else if (pendingDue > 0) {
+      // Pre-fill full pending due or comfortable chunk
+      defaultAmt = String(pendingDue);
+    }
+
+    setInstallmentAmount(defaultAmt);
+    setInstallmentMethod('Cash');
+    setInstallmentNotes('');
+    setInstallmentReference('');
+    setCompletedReceipt(null);
+    setIsInstallmentModalOpen(true);
+  };
+
+  const handleRecordInstallment = async (e) => {
+    e.preventDefault();
+    if (!installmentCustomer) return;
+    const numAmt = Number(installmentAmount);
+    if (!numAmt || numAmt <= 0) {
+      toast.error('Please enter a valid installment amount greater than 0.');
+      return;
+    }
+
+    setSubmittingInstallment(true);
+    try {
+      const payload = {
+        amount: numAmt,
+        payment_method: installmentMethod,
+        notes: installmentNotes,
+        reference_id: installmentReference,
+        invoice_id: installmentInvoiceId || undefined
+      };
+
+      const res = await api.post(`/customers/${installmentCustomer.id}/installment`, payload);
+      const { receipt, customer: updatedCust, allocated_invoices } = res.data;
+
+      setCompletedReceipt(receipt);
+      toast.success(`Installment payment of ₹${numAmt.toLocaleString('en-IN')} recorded successfully!`);
+
+      // Refresh customer list in background
+      fetchCustomers();
+
+      // If customer modal is currently open, refresh data
+      if (selectedCustomer && (selectedCustomer.customer?.id === installmentCustomer.id)) {
+        try {
+          const detailRes = await api.get(`/customers/${installmentCustomer.id}`);
+          setSelectedCustomer(detailRes.data);
+        } catch (_) {}
+      }
+    } catch (err) {
+      toast.error('Failed to record installment payment: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingInstallment(false);
     }
   };
 
@@ -401,6 +479,17 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {pendingAmount > 0 && (
+                    <button
+                      onClick={() => handleOpenInstallment(cust)}
+                      className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-md shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      title="Record an installment repayment for customer pending dues"
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Pay Installment</span>
+                    </button>
+                  )}
+
                   {cust.email ? (
                     <a
                       href={`mailto:${cust.email}?subject=Your Purchase Summary - Smart Merchant Store&body=Dear ${cust.name},%0A%0AThank you for being our valued customer! Your lifetime spend is ${formatCurrency(lifetimeSpend, 2)} across ${ordersCount} orders.%0A%0ARegards,%0ASmart Merchant Store`}
@@ -582,126 +671,302 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
                   </div>
                 </div>
 
-                <div className={`${(selectedCustomer.customer?.pending_amount || 0) > 0 ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/60 ring-2 ring-amber-400/20' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'} rounded-2xl p-3 border text-center transition-all`}>
-                  <div className="text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase flex items-center justify-center gap-1">
-                    {(selectedCustomer.customer?.pending_amount || 0) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />}
-                    <span>Pending Dues</span>
+                <div className={`${(selectedCustomer.customer?.pending_amount || 0) > 0 ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/60 ring-2 ring-amber-400/20' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'} rounded-2xl p-3 border text-center transition-all flex flex-col justify-between`}>
+                  <div>
+                    <div className="text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase flex items-center justify-center gap-1">
+                      {(selectedCustomer.customer?.pending_amount || 0) > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />}
+                      <span>Pending Dues</span>
+                    </div>
+                    <div className="font-mono font-extrabold text-sm sm:text-base text-amber-700 dark:text-amber-400 mt-0.5">
+                      {formatCurrency(selectedCustomer.customer?.pending_amount || 0)}
+                    </div>
                   </div>
-                  <div className="font-mono font-extrabold text-sm sm:text-base text-amber-700 dark:text-amber-400 mt-0.5">
-                    {formatCurrency(selectedCustomer.customer?.pending_amount || 0)}
-                  </div>
-                </div>
-
-                <div className="bg-brand-50 dark:bg-brand-950/30 rounded-2xl p-3 border border-brand-200 dark:border-brand-800/40 text-center">
-                  <div className="text-[10px] text-brand-600 dark:text-brand-400 font-bold uppercase">Invoices</div>
-                  <div className="font-mono font-extrabold text-sm sm:text-base text-brand-700 dark:text-brand-300 mt-0.5">
-                    {selectedCustomer.invoices?.length || selectedCustomer.customer?.orders_count || 0}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Transaction & Invoice History
-                </h4>
-                <span className="text-[11px] text-slate-400">
-                  {selectedCustomer.invoices?.length || 0} records
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {(selectedCustomer.invoices || []).map((inv) => {
-                  const isPending = (inv.payment_status || '').toUpperCase() === 'PENDING' || (inv.payment_status || '').toUpperCase() === 'UNPAID';
-                  const isUpdating = markingPaidId === inv.id;
-                  const mailSubject = encodeURIComponent(`Invoice ${inv.invoice_number} - Payment Notice`);
-                  const mailBody = encodeURIComponent(`Dear ${selectedCustomer.customer?.name},\n\nThis is a summary for Invoice ${inv.invoice_number} dated ${inv.date} for an amount of ${formatCurrency(inv.total_amount, 2)}.\n\nPayment Status: ${inv.payment_status || 'Paid'}\n\nThank you for choosing Smart Merchant Store.`);
-                  const waText = encodeURIComponent(`Hi ${selectedCustomer.customer?.name}, reminder regarding Invoice ${inv.invoice_number} of ${formatCurrency(inv.total_amount, 2)} (${inv.payment_status || 'Pending'}). Please clear at your convenience.`);
-
-                  return (
-                    <div 
-                      key={inv.id} 
-                      className={`p-3.5 rounded-2xl border transition-all ${
-                        isPending 
-                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60 shadow-sm' 
-                          : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                      }`}
+                  {(selectedCustomer.customer?.pending_amount || 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenInstallment(selectedCustomer.customer)}
+                      className="mt-2 w-full py-1 px-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-[10px] flex items-center justify-center gap-1 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">{inv.invoice_number}</span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              isPending
-                                ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-                                : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                            }`}>
-                              {inv.payment_status || 'Paid'}
-                            </span>
+                      <Wallet className="w-3 h-3" />
+                      <span>Pay Installment</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="bg-brand-50 dark:bg-brand-950/30 rounded-2xl p-3 border border-brand-200 dark:border-brand-800/40 text-center flex flex-col justify-between">
+                  <div>
+                    <div className="text-[10px] text-brand-600 dark:text-brand-400 font-bold uppercase">Invoices</div>
+                    <div className="font-mono font-extrabold text-sm sm:text-base text-brand-700 dark:text-brand-300 mt-0.5">
+                      {selectedCustomer.invoices?.length || selectedCustomer.customer?.orders_count || 0}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-brand-600 dark:text-brand-400 font-medium mt-1">
+                    {selectedCustomer.payments?.length || 0} repayments
+                  </div>
+                </div>
+              </div>
+
+              {/* TABS: Invoices vs Repayment Receipts */}
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 pt-1 gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('invoices')}
+                    className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
+                      modalTab === 'invoices'
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Invoices ({selectedCustomer.invoices?.length || 0})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('receipts')}
+                    className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
+                      modalTab === 'receipts'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>Repayments ({selectedCustomer.payments?.length || 0})</span>
+                  </button>
+                </div>
+
+                {(selectedCustomer.customer?.pending_amount || 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInstallment(selectedCustomer.customer)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>+ Pay Installment</span>
+                  </button>
+                )}
+              </div>
+
+              {/* TAB 1: INVOICES & OUTSTANDING DUES */}
+              {modalTab === 'invoices' && (
+                <div className="space-y-2.5">
+                  {(selectedCustomer.invoices || []).map((inv) => {
+                    const statusUpper = (inv.payment_status || 'PAID').toUpperCase();
+                    const isPending = statusUpper === 'PENDING' || statusUpper === 'UNPAID' || statusUpper === 'DUE';
+                    const isPartial = statusUpper === 'PARTIAL';
+                    const isUnsettled = isPending || isPartial;
+                    const totalAmt = Number(inv.total_amount || 0);
+                    const paidAmt = inv.paid_amount !== undefined ? Number(inv.paid_amount) : (isUnsettled ? 0 : totalAmt);
+                    const balanceDue = inv.balance_due !== undefined ? Number(inv.balance_due) : (isUnsettled ? totalAmt : 0);
+                    const isUpdating = markingPaidId === inv.id;
+
+                    const mailSubject = encodeURIComponent(`Invoice ${inv.invoice_number} - Payment Notice`);
+                    const mailBody = encodeURIComponent(`Dear ${selectedCustomer.customer?.name},\n\nSummary for Invoice ${inv.invoice_number} dated ${inv.date}.\nTotal: ${formatCurrency(totalAmt, 2)}\nBalance Due: ${formatCurrency(balanceDue, 2)}\nStatus: ${statusUpper}\n\nSmart Merchant Store.`);
+                    const waText = encodeURIComponent(`Hi ${selectedCustomer.customer?.name}, reminder for Invoice ${inv.invoice_number}. Total: ${formatCurrency(totalAmt, 2)}, Balance Due: ${formatCurrency(balanceDue, 2)} (${statusUpper}). Please clear via installment at your convenience.`);
+
+                    return (
+                      <div 
+                        key={inv.id} 
+                        className={`p-3.5 rounded-2xl border transition-all ${
+                          isUnsettled 
+                            ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60 shadow-sm' 
+                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">{inv.invoice_number}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                isPartial
+                                  ? 'bg-orange-100 dark:bg-orange-900/60 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
+                                  : isPending
+                                  ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                                  : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                              }`}>
+                                {inv.payment_status || 'Paid'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                              <span>📅 {inv.date}</span>
+                              <span>•</span>
+                              <span>💳 {inv.payment_method || 'Cash'}</span>
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                            <span>📅 {inv.date}</span>
-                            <span>•</span>
-                            <span>💳 {inv.payment_method || 'Cash'}</span>
-                          </p>
+
+                          <div className="text-right">
+                            <div className="font-mono font-extrabold text-sm text-slate-900 dark:text-white">
+                              {formatCurrency(totalAmt)}
+                            </div>
+                            {isPartial && (
+                              <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 font-mono">
+                                Due: {formatCurrency(balanceDue)}
+                              </div>
+                            )}
+                            {inv.items && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {inv.items.length} line {inv.items.length === 1 ? 'item' : 'items'}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="text-right">
-                          <div className="font-mono font-extrabold text-sm text-slate-900 dark:text-white">
-                            {formatCurrency(inv.total_amount)}
-                          </div>
-                          {inv.items && (
-                            <div className="text-[10px] text-slate-400 mt-0.5">
-                              {inv.items.length} line {inv.items.length === 1 ? 'item' : 'items'}
-                            </div>
+                        {/* Action buttons for Unsettled / Paid invoices */}
+                        <div className="mt-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2 flex-wrap">
+                          {isUnsettled && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenInstallment(selectedCustomer.customer, inv)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                              >
+                                <Wallet className="w-3.5 h-3.5" />
+                                <span>Pay Installment</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleMarkInvoicePaid(inv.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                              >
+                                <Check className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
+                                <span>{isUpdating ? 'Updating...' : '⚡ Clear Full Due'}</span>
+                              </button>
+                            </>
+                          )}
+
+                          {selectedCustomer.customer?.phone && isUnsettled && (
+                            <a
+                              href={`https://wa.me/${selectedCustomer.customer.phone.replace(/[^0-9]/g, '')}?text=${waText}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 transition-colors"
+                            >
+                              <span>WhatsApp Notice</span>
+                            </a>
+                          )}
+
+                          {selectedCustomer.customer?.email && (
+                            <a
+                              href={`mailto:${selectedCustomer.customer.email}?subject=${mailSubject}&body=${mailBody}`}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold hover:bg-indigo-100 transition-colors"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Email Copy</span>
+                            </a>
                           )}
                         </div>
                       </div>
+                    );
+                  })}
 
-                      {/* Action buttons for Pending / Paid invoices */}
-                      <div className="mt-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-800 flex items-center gap-2 flex-wrap">
-                        {isPending && (
-                          <button
-                            type="button"
-                            disabled={isUpdating}
-                            onClick={() => handleMarkInvoicePaid(inv.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                          >
-                            <Check className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
-                            <span>{isUpdating ? 'Updating...' : '⚡ Mark as Paid'}</span>
-                          </button>
-                        )}
-
-                        {selectedCustomer.customer?.phone && isPending && (
-                          <a
-                            href={`https://wa.me/${selectedCustomer.customer.phone.replace(/[^0-9]/g, '')}?text=${waText}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 transition-colors"
-                          >
-                            <span>WhatsApp Notice</span>
-                          </a>
-                        )}
-
-                        {selectedCustomer.customer?.email && (
-                          <a
-                            href={`mailto:${selectedCustomer.customer.email}?subject=${mailSubject}&body=${mailBody}`}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold hover:bg-indigo-100 transition-colors"
-                          >
-                            <Send className="w-3 h-3" />
-                            <span>Email Copy</span>
-                          </a>
-                        )}
-                      </div>
+                  {(!selectedCustomer.invoices || selectedCustomer.invoices.length === 0) && (
+                    <div className="text-center py-8 text-xs text-slate-400">
+                      No past transaction invoices recorded for this customer.
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+              )}
 
-                {(!selectedCustomer.invoices || selectedCustomer.invoices.length === 0) && (
-                  <div className="text-center py-8 text-xs text-slate-400">
-                    No past transaction invoices recorded for this customer.
-                  </div>
-                )}
-              </div>
+              {/* TAB 2: REPAYMENT RECEIPTS LEDGER */}
+              {modalTab === 'receipts' && (
+                <div className="space-y-2.5">
+                  {(selectedCustomer.payments && selectedCustomer.payments.length > 0) ? (
+                    selectedCustomer.payments.map((p) => {
+                      const waReceiptMsg = encodeURIComponent(
+                        `*Smart Merchant Payment Receipt*\nReceipt: ${p.receipt_number}\nCustomer: ${p.customer_name}\nAmount Repaid: ${formatCurrency(p.amount, 2)}\nPayment Mode: ${p.payment_method}\nDate: ${p.payment_date}\n${p.reference_id ? `Reference: ${p.reference_id}\n` : ''}Thank you for your payment!`
+                      );
+
+                      return (
+                        <div
+                          key={p.id}
+                          className="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 text-xs">
+                                  {p.receipt_number || p.id}
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                  Repayment ✓
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                                <span>📅 {p.payment_date || (p.created_at ? p.created_at.slice(0, 10) : '—')}</span>
+                                <span>•</span>
+                                <span>💳 {p.payment_method || 'Cash'}</span>
+                              </p>
+                              {p.reference_id && (
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                                  Ref: {p.reference_id}
+                                </p>
+                              )}
+                              {p.notes && (
+                                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 italic">
+                                  "{p.notes}"
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="text-right">
+                              <div className="font-mono font-extrabold text-base text-emerald-700 dark:text-emerald-300">
+                                +{formatCurrency(p.amount)}
+                              </div>
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+                                Received
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Allocation tags if present */}
+                          {p.allocated_invoices && p.allocated_invoices.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400">Allocated to:</span>
+                              {p.allocated_invoices.map((alloc, idx) => (
+                                <span key={idx} className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-slate-700 dark:text-slate-300">
+                                  {alloc.invoice_number}: {formatCurrency(alloc.amount_allocated)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* WhatsApp receipt button */}
+                          {selectedCustomer.customer?.phone && (
+                            <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex items-center justify-end">
+                              <a
+                                href={`https://wa.me/${selectedCustomer.customer.phone.replace(/[^0-9]/g, '')}?text=${waReceiptMsg}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-colors"
+                              >
+                                <Share2 className="w-3 h-3" />
+                                <span>WhatsApp Receipt</span>
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-xs text-slate-400 space-y-2">
+                      <Receipt className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                      <p>No installment repayments recorded yet for this customer.</p>
+                      {(selectedCustomer.customer?.pending_amount || 0) > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenInstallment(selectedCustomer.customer)}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-sm transition-all"
+                        >
+                          <Wallet className="w-3.5 h-3.5" />
+                          <span>Record First Installment</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
@@ -712,6 +977,294 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
                 Close
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* INSTALLMENT REPAYMENT MODAL */}
+      {isInstallmentModalOpen && installmentCustomer && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in">
+          <div className="fixed inset-0" onClick={() => !submittingInstallment && setIsInstallmentModalOpen(false)} />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden z-10 my-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    Customer Installment Repayment
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Record money repaid by customer to settle pending dues and issue receipt.
+                  </p>
+                </div>
+              </div>
+              <button
+                disabled={submittingInstallment}
+                onClick={() => setIsInstallmentModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            {completedReceipt ? (
+              /* RECEIPT SUCCESS CELEBRATION VIEW */
+              <div className="p-6 space-y-4 text-xs overflow-y-auto">
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-3xl p-6 text-center space-y-3">
+                  <div className="w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-emerald-900 dark:text-emerald-200">
+                      Installment Repaid Successfully!
+                    </h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
+                      Receipt <span className="font-mono font-bold">{completedReceipt.receipt_number}</span> has been generated and ledger updated.
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800/80 max-w-sm mx-auto text-left space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">Customer:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{installmentCustomer.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">Amount Repaid:</span>
+                      <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                        {formatCurrency(completedReceipt.amount, 2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">Payment Method:</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{completedReceipt.payment_method}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">Date:</span>
+                      <span className="text-slate-800 dark:text-slate-200">{completedReceipt.payment_date}</span>
+                    </div>
+                    {installmentCustomer.pending_amount !== undefined && (
+                      <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-500">Remaining Due:</span>
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                          {formatCurrency(Math.max(0, Number(installmentCustomer.pending_amount || 0) - Number(completedReceipt.amount || 0)), 2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* WhatsApp Share Button */}
+                  {installmentCustomer.phone && (
+                    <a
+                      href={`https://wa.me/${installmentCustomer.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                        `*Smart Merchant Payment Receipt*\nReceipt: ${completedReceipt.receipt_number}\nCustomer: ${installmentCustomer.name}\nAmount Repaid: ${formatCurrency(completedReceipt.amount, 2)}\nPayment Mode: ${completedReceipt.payment_method}\nDate: ${completedReceipt.payment_date}\nRemaining Balance Due: ${formatCurrency(Math.max(0, Number(installmentCustomer.pending_amount || 0) - Number(completedReceipt.amount || 0)), 2)}\nThank you for choosing Smart Merchant Store!`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>Share Receipt on WhatsApp</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompletedReceipt(null);
+                      setInstallmentAmount('');
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    Record Another
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsInstallmentModalOpen(false)}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-md transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* INSTALLMENT INPUT FORM */
+              <form onSubmit={handleRecordInstallment} className="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+                {/* Customer Info Card */}
+                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-sm">
+                      {installmentCustomer.name?.charAt(0) || 'C'}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">{installmentCustomer.name}</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{installmentCustomer.phone || 'No phone'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400">Total Pending</span>
+                    <div className="font-mono font-black text-amber-700 dark:text-amber-400 text-base">
+                      {formatCurrency(installmentCustomer.pending_amount || 0)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider flex items-center justify-between">
+                    <span>Installment Amount to Repay (₹) *</span>
+                    <span className="text-slate-400 font-normal">Enter amount</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      required
+                      placeholder="0.00"
+                      value={installmentAmount}
+                      onChange={(e) => setInstallmentAmount(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-slate-900 dark:text-white font-mono font-bold text-base placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  {/* Quick Preset Amount Chips */}
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    {[500, 1000, 2000, 5000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setInstallmentAmount(String(amt))}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-700 font-mono text-[11px] font-semibold border border-slate-200 dark:border-slate-700 transition-colors"
+                      >
+                        +₹{amt.toLocaleString('en-IN')}
+                      </button>
+                    ))}
+                    {(installmentCustomer.pending_amount || 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setInstallmentAmount(String(installmentCustomer.pending_amount))}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-mono text-[11px] font-bold shadow-xs transition-colors"
+                      >
+                        Clear Full ({formatCurrency(installmentCustomer.pending_amount)})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Balance Calculation Box */}
+                {installmentAmount && Number(installmentAmount) > 0 && (
+                  <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold">Current Due</div>
+                      <div className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs mt-0.5">
+                        {formatCurrency(installmentCustomer.pending_amount || 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold">Paying Now</div>
+                      <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">
+                        -{formatCurrency(installmentAmount)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-semibold">Balance After</div>
+                      <div className="font-mono font-black text-amber-800 dark:text-amber-300 text-xs mt-0.5">
+                        {formatCurrency(Math.max(0, Number(installmentCustomer.pending_amount || 0) - Number(installmentAmount)))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Method Selector */}
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider">
+                    Payment Method *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 mt-1.5">
+                    {['Cash', 'UPI / GPay / PhonePe', 'Card', 'Bank Transfer', 'Cheque'].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setInstallmentMethod(method)}
+                        className={`py-2 px-2.5 rounded-xl text-center text-xs font-semibold border transition-all ${
+                          installmentMethod === method
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reference ID (UPI / Cheque / Bank Transfer ID) */}
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider">
+                    Reference / UPI Transaction ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UPI-1234567890 or Cheque #88210"
+                    value={installmentReference}
+                    onChange={(e) => setInstallmentReference(e.target.value)}
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 font-mono text-xs"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider">
+                    Notes / Remarks (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Partial repayment for wedding groceries"
+                    value={installmentNotes}
+                    onChange={(e) => setInstallmentNotes(e.target.value)}
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    disabled={submittingInstallment}
+                    onClick={() => setIsInstallmentModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingInstallment}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white shadow-md shadow-amber-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {submittingInstallment ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Recording...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Confirm Installment & Issue Receipt</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>,
         document.body

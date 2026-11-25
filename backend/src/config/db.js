@@ -27,7 +27,8 @@ class DatabaseStore {
       expenses: [],
       expense_categories: [],
       staff: [],
-      marketing_campaigns: []
+      marketing_campaigns: [],
+      customer_payments: []
     };
     this.load();
   }
@@ -303,7 +304,7 @@ class DatabaseStore {
     if (!pool) return;
 
     try {
-      const tables = ['users', 'categories', 'suppliers', 'products', 'customers', 'invoices', 'expenses', 'inventory_transactions', 'purchase_orders'];
+      const tables = ['users', 'categories', 'suppliers', 'products', 'customers', 'invoices', 'expenses', 'inventory_transactions', 'purchase_orders', 'customer_payments'];
       let loadedAny = false;
 
       for (const t of tables) {
@@ -384,6 +385,8 @@ class DatabaseStore {
         ALTER TABLE IF EXISTS invoices ADD COLUMN IF NOT EXISTS items JSONB;
         ALTER TABLE IF EXISTS invoices ADD COLUMN IF NOT EXISTS billed_by VARCHAR(255);
         ALTER TABLE IF EXISTS invoices ADD COLUMN IF NOT EXISTS notes TEXT;
+        ALTER TABLE IF EXISTS invoices ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(14, 2) DEFAULT 0.00;
+        ALTER TABLE IF EXISTS invoices ADD COLUMN IF NOT EXISTS balance_due NUMERIC(14, 2) DEFAULT 0.00;
         ALTER TABLE IF EXISTS expenses ADD COLUMN IF NOT EXISTS store_id VARCHAR(64);
         ALTER TABLE IF EXISTS expenses ADD COLUMN IF NOT EXISTS date VARCHAR(64);
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS store_id VARCHAR(64);
@@ -391,10 +394,27 @@ class DatabaseStore {
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS adjustment_type VARCHAR(50);
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS reason TEXT;
         ALTER TABLE IF EXISTS inventory_transactions ADD COLUMN IF NOT EXISTS adjusted_by VARCHAR(255);
+        CREATE TABLE IF NOT EXISTS customer_payments (
+          id VARCHAR(64) PRIMARY KEY,
+          receipt_number VARCHAR(100),
+          store_id VARCHAR(64),
+          customer_id VARCHAR(64) REFERENCES customers(id) ON DELETE CASCADE,
+          customer_name VARCHAR(255),
+          customer_phone VARCHAR(50),
+          amount NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+          payment_method VARCHAR(50) DEFAULT 'Cash',
+          payment_date VARCHAR(64),
+          reference_id VARCHAR(100),
+          notes TEXT,
+          allocated_invoices JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_cust_payments_customer ON customer_payments(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_cust_payments_store ON customer_payments(store_id);
       `);
       this._pgColumnsCache.clear();
 
-      const tables = ['users', 'categories', 'suppliers', 'products', 'customers', 'invoices', 'expenses', 'inventory_transactions', 'purchase_orders'];
+      const tables = ['users', 'categories', 'suppliers', 'products', 'customers', 'invoices', 'expenses', 'inventory_transactions', 'purchase_orders', 'customer_payments'];
       const CHUNK_SIZE = 10;
       let totalSynced = 0;
 

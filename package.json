@@ -1,19 +1,24 @@
 {
   "name": "smart-merchant",
-  "version": "2.0.0",
-  "description": "Smart Merchant: AI-Powered Merchant Management, POS & Business Intelligence Platform",
+  "version": "2.1.0",
+  "description": "Smart Merchant: AI-Powered Enterprise Retail Management, POS & Predictive Business Intelligence Platform",
   "scripts": {
-    "start": "cd backend && npm start",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build",
-    "start:ml": "cd ml-service && python run.py"
+    "start": "npm --prefix backend start",
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend run dev",
+    "dev": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "start:ml": "cd ml-service && python run.py",
+    "diagnose": "python diagnose.py"
   },
   "keywords": [
     "smart-merchant",
     "pos",
+    "crm",
+    "installment-payments",
     "business-intelligence",
     "machine-learning",
     "sales-forecasting",

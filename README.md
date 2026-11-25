@@ -29,15 +29,14 @@ The repository is organized into distinct application layers:
 ```
 DWDMLab/
 ├── app/                  # Mobile Application subsystem (iOS / Android / Flutter / React Native)
-├── website/              # Web Application and Services
-│   ├── frontend/         # React 18 + Vite + Tailwind CSS + Lucide + Recharts
-│   ├── backend/          # Express.js REST API + PostgreSQL Pooler + JWT Auth + RBAC
-│   └── ml-service/       # Python 3.10+ FastAPI + Scikit-Learn Predictive Pipeline
+├── frontend/             # React 18 + Vite + Tailwind CSS + Lucide + Recharts (Vercel Root)
+├── backend/              # Express.js REST API + PostgreSQL Pooler + JWT Auth + RBAC (Render Root)
+├── ml-service/           # Python 3.10+ FastAPI + Scikit-Learn Predictive Pipeline
 ├── diagnose.py           # Multi-target data and financial consistency diagnostic tool
 ├── HANDOFF.md            # Comprehensive architecture, credential guide & system state
 ├── package.json          # Root monorepo orchestrator
 ├── setup.bat             # One-click multi-environment dependency installer
-└── start_all.bat         # Concurrent local development runner (all 3 subsystems)
+└── start_all.bat         # Concurrent local development runner (all subsystems)
 ```
 
 ---
@@ -62,7 +61,9 @@ DWDMLab/
 
 ### 4. Comprehensive Customer Relationship Management (CRM)
 - Customer profiles with transaction histories, purchase frequency, and lifetime spend.
-- Automated ledger tracking of pending dues with status updates (Paid / Cleared vs Unpaid).
+- **Installment & Partial Repayments:** Directly record customer repayments, auto-allocate across oldest unpaid invoices (FIFO) or specific invoices, and update ledger balances.
+- **Instant Branded Receipts & WhatsApp Delivery:** Generate official repayment receipts (`REC-...`) and share receipts directly to customer WhatsApp with one click.
+- **Invoice Status Lifecycle:** Supports `PAID`, `PARTIAL`, and `PENDING/UNPAID` statuses with live balance tracking.
 
 ### 5. Multi-Provider Enterprise Authentication & RBAC
 - **Google OAuth Sign-In:** Native Firebase popup integration.

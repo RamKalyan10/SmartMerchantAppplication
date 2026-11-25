@@ -25,19 +25,18 @@ The codebase is organized into dedicated subsystem directories:
 DWDMLab/
 ├── app/                  # Mobile Application layer (iOS / Android / Flutter / React Native)
 │   └── .gitkeep
-├── website/              # Full Web Application and Services
-│   ├── backend/          # Node.js + Express REST API Server
-│   │   ├── src/          # Controllers, routes, middleware, and database adapters
-│   │   ├── .env          # Backend environment configuration (git ignored)
-│   │   └── package.json
-│   ├── frontend/         # React 18 + Vite + Tailwind CSS Single Page Application
-│   │   ├── src/          # Pages, components, contexts (Auth, Theme, Toast), and services
-│   │   ├── .env          # Frontend configuration pointing to cloud API (git ignored)
-│   │   └── vite.config.js
-│   └── ml-service/       # Python 3.10+ Machine Learning Predictive Engine
-│       ├── api/          # FastAPI inference endpoints
-│       ├── models/       # Scikit-learn serialized models (.joblib)
-│       └── prediction/   # Pipeline forecasting modules
+├── frontend/             # React 18 + Vite + Tailwind CSS Single Page Application (Vercel Root)
+│   ├── src/              # Pages, components, contexts (Auth, Theme, Toast), and services
+│   ├── .env              # Frontend configuration pointing to cloud API (git ignored)
+│   └── vite.config.js
+├── backend/              # Node.js + Express REST API Server (Render Root)
+│   ├── src/              # Controllers, routes, middleware, and database adapters
+│   ├── .env              # Backend environment configuration (git ignored)
+│   └── package.json
+├── ml-service/           # Python 3.10+ Machine Learning Predictive Engine
+│   ├── api/              # FastAPI inference endpoints
+│   ├── models/           # Scikit-learn serialized models (.joblib)
+│   └── prediction/       # Pipeline forecasting modules
 ├── diagnose.py           # Diagnostic script for database and financial integrity
 ├── HANDOFF.md            # This document
 ├── package.json          # Root monorepo script coordinator
@@ -62,6 +61,7 @@ The database is accessed via connection pooling:
 | `products` | 88 | Comprehensive retail product catalog with active barcodes and stock levels |
 | `invoices` | 7,862 | Daily transactions covering **2026-01-01 through 2026-11-25** |
 | `customers` | 5 | CRM profiles with customer purchase frequency and pending dues |
+| `customer_payments` | Active | Customer installment and partial repayment ledger with receipts (`REC-...`) |
 | `suppliers` | 5 | Commercial vendor records with contact details and purchase orders |
 | `expenses` | ~300 | Categorized operating costs (Rent, Salaries, Utilities, Logistics) |
 
