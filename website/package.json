@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "Smart Merchant: AI-Powered Merchant Management, POS & Business Intelligence Platform",
   "scripts": {
+    "build": "cd website/frontend && npm install && npm run build",
     "start": "cd website/backend && npm start",
     "start:backend": "cd website/backend && npm start",
     "start:frontend": "cd website/frontend && npm run dev",
