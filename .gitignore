@@ -30,11 +30,19 @@ scratch/
 *.local.*
 backend/scripts/scratch*
 backend/src/scripts/scratch*
+website/backend/scripts/scratch*
+website/backend/src/scripts/scratch*
 
 # ─── Database & Persistent Data ──────────────────────────────────────────────
 backend/data/
+website/backend/data/
+**/backend/data/
 ml-service/data/*.csv
+website/ml-service/data/*.csv
+**/ml-service/data/*.csv
 !ml-service/data/*.py
+!website/ml-service/data/*.py
+!**/ml-service/data/*.py
 *.sqlite
 *.sqlite3
 *.db
