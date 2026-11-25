@@ -392,7 +392,7 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
               </div>
 
               {/* BOTTOM ROW: Active badge on left, Mail + View History buttons on right */}
-              <div className="flex items-center justify-between pt-1 gap-2 min-w-0">
+              <div className="flex items-center justify-between pt-1 gap-2 flex-wrap min-w-0">
                 {/* Active Customer badge */}
                 <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

@@ -134,9 +134,12 @@ export function AuthProvider({ children }) {
       closeAuth();
       return { success: true, user: result.user };
     } catch (err) {
-      const msg = err.code === 'auth/popup-closed-by-user'
-        ? 'Sign-in cancelled'
-        : (err.message || 'Google sign-in failed');
+      let msg = err.message || 'Google sign-in failed';
+      if (err.code === 'auth/popup-closed-by-user') {
+        msg = 'Sign-in cancelled';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'This domain (smart-merchant-appplication.vercel.app) is not authorized in Firebase. Please add it to Firebase Console > Authentication > Settings > Authorized domains.';
+      }
       setAuthError(msg);
       return { success: false, message: msg };
     } finally {
@@ -148,29 +151,42 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     setAuthError(null);
-    try {
-      // 1. Try backend API first (Supabase PostgreSQL database user e.g. onr1@gmail.com)
-      try {
-        const res = await api.post('/auth/login', { email, password });
-        if (res.data?.token) {
-          localStorage.setItem('sm_token', res.data.token);
-          localStorage.setItem('sm_user', JSON.stringify(res.data.user));
-          setUser(res.data.user);
-          closeAuth();
-          return { success: true, user: res.data.user };
-        }
-      } catch (backendErr) {
-        // Backend didn't recognize or error - proceed to check Firebase
-      }
+    let backendErrorMessage = null;
+    let backendSuccess = false;
 
-      // 2. Try Firebase Auth
-      const res = await signInWithEmailAndPassword(auth, email, password);
+    // 1. Try backend API first (PostgreSQL database user e.g. tramkalyanrahul@gmail.com)
+    try {
+      const res = await api.post('/auth/login', { email: (email || '').trim(), password });
+      if (res.data?.token) {
+        localStorage.setItem('sm_token', res.data.token);
+        localStorage.setItem('sm_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        closeAuth();
+        backendSuccess = true;
+        return { success: true, user: res.data.user };
+      }
+    } catch (backendErr) {
+      console.warn('Backend login attempt:', backendErr);
+      if (backendErr.response) {
+        backendErrorMessage = backendErr.response.data?.message || 'Invalid email or password.';
+      } else if (backendErr.code === 'ECONNABORTED' || backendErr.message?.includes('timeout')) {
+        backendErrorMessage = 'Server took too long to respond. The Render service may be waking up from sleep (~30s). Please retry in a moment.';
+      } else if (backendErr.message === 'Network Error') {
+        backendErrorMessage = 'Unable to connect to backend server. Render service may be waking up. Please retry in 30 seconds.';
+      }
+    }
+
+    if (backendSuccess) return;
+
+    // 2. Try Firebase Auth (fallback for Firebase-registered accounts)
+    try {
+      const res = await signInWithEmailAndPassword(auth, (email || '').trim(), password);
       closeAuth();
       return { success: true, user: res.user };
     } catch (err) {
-      let msg = 'Login failed. Please check credentials.';
+      let msg = backendErrorMessage || 'Login failed. Please check credentials.';
       if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        msg = 'Invalid email or password.';
+        msg = backendErrorMessage || 'Invalid email or password.';
       } else if (err.code === 'auth/wrong-password') {
         msg = 'Incorrect password.';
       } else if (err.code === 'auth/too-many-requests') {
