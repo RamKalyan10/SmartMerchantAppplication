@@ -55,7 +55,7 @@ exports.getCustomers = (req, res) => {
     const totalSpent = custInvoices.length > 0 
       ? Math.round(calculatedPaid * 100) / 100 
       : (Number(c.total_spent) || 0);
-    const pendingAmount = custInvoices.length > 0 
+    const pendingAmount = (calculatedPending > 0)
       ? Math.round(calculatedPending * 100) / 100 
       : (Number(c.pending_amount) || 0);
     const ordersCount = custInvoices.length > 0 
@@ -126,7 +126,9 @@ exports.getCustomerById = (req, res) => {
   const enrichedCustomer = {
     ...customer,
     total_spent: invoices.length > 0 ? Math.round(calculatedPaid * 100) / 100 : (Number(customer.total_spent) || 0),
-    pending_amount: invoices.length > 0 ? Math.round(calculatedPending * 100) / 100 : (Number(customer.pending_amount) || 0),
+    pending_amount: (calculatedPending > 0)
+      ? Math.round(calculatedPending * 100) / 100 
+      : (Number(customer.pending_amount) || 0),
     pending_count: pendingCount,
     orders_count: invoices.length > 0 ? invoices.length : (Number(customer.orders_count) || 0)
   };

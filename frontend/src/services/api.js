@@ -1,9 +1,17 @@
 import axios from 'axios';
 
 // Auto-resolving API Base URL:
-// Always connect to the production Render backend unless an explicit custom URL is configured.
-// This ensures authentication and data load correctly both locally (npm run dev) and in production (Vercel).
-let resolvedBaseUrl = import.meta.env.VITE_API_URL || 'https://smart-merchant-appplication.onrender.com/api';
+// - When running locally (localhost / 127.0.0.1), connect to local backend (port 5000)
+//   which connects directly to the local Python ML service (port 8000).
+// - When deployed in production (Vercel / Cloud), connect to the production Render backend.
+const isLocal = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+);
+
+let resolvedBaseUrl = isLocal
+  ? 'http://localhost:5000/api'
+  : (import.meta.env.VITE_API_URL || 'https://smart-merchant-appplication.onrender.com/api');
 
 if (
   !resolvedBaseUrl ||
@@ -11,7 +19,7 @@ if (
   resolvedBaseUrl.startsWith('/') ||
   resolvedBaseUrl.includes('smart-merchant-api.onrender.com')
 ) {
-  resolvedBaseUrl = 'https://smart-merchant-appplication.onrender.com/api';
+  resolvedBaseUrl = isLocal ? 'http://localhost:5000/api' : 'https://smart-merchant-appplication.onrender.com/api';
 }
 
 // Ensure trailing slash is stripped

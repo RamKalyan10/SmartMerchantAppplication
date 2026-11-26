@@ -340,7 +340,7 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
           return (
             <div
               key={cust.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all duration-300 shadow-sm overflow-hidden"
+              className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col space-y-3 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all duration-300 shadow-sm overflow-hidden"
             >
               {/* TOP ROW: Avatar, Name + Copyable ID, Orders Badge */}
               <div className="flex items-start justify-between gap-2.5 min-w-0">
@@ -407,106 +407,109 @@ export default function CustomersPage({ quickActionTrigger, isNewModalOpen: prop
               </div>
 
               {/* DUAL KPI STATS BOXES (Clean non-overlapping vertical layout) */}
-              <div className="grid grid-cols-2 gap-2">
-                {/* Box 1: Lifetime Spend */}
-                <div className="bg-emerald-50/80 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 truncate">
-                      Lifetime Spend
-                    </span>
-                    <div className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                      <TrendingUp className="w-2.5 h-2.5" />
+              {/* DUAL KPI STATS BOXES & BUTTONS (Grouped with NO gap) */}
+              <div className="mt-auto space-y-2 pt-1">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Box 1: Lifetime Spend */}
+                  <div className="bg-emerald-50/80 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 truncate">
+                        Lifetime Spend
+                      </span>
+                      <div className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                      </div>
+                    </div>
+                    <div className="mt-1 min-w-0">
+                      <div
+                        className="text-sm sm:text-base font-black text-emerald-900 dark:text-emerald-300 font-mono tracking-tight truncate leading-tight"
+                        title={formatCurrency(lifetimeSpend, 2)}
+                      >
+                        {formatCurrency(lifetimeSpend, 0)}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                        {ordersCount} orders
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-1 min-w-0">
-                    <div
-                      className="text-sm sm:text-base font-black text-emerald-900 dark:text-emerald-300 font-mono tracking-tight truncate leading-tight"
-                      title={formatCurrency(lifetimeSpend, 2)}
-                    >
-                      {formatCurrency(lifetimeSpend, 0)}
+
+                  {/* Box 2: Pending Amount */}
+                  <div className={`rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs border min-w-0 ${
+                    pendingAmount > 0
+                      ? 'bg-amber-50/80 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-800/40'
+                      : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800'
+                  }`}>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider truncate ${
+                        pendingAmount > 0 ? 'text-amber-800 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
+                      }`}>
+                        Pending Dues
+                      </span>
+                      <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                        pendingAmount > 0
+                          ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                      }`}>
+                        <Clock className="w-2.5 h-2.5" />
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
-                      {ordersCount} orders
+                    <div className="mt-1 min-w-0">
+                      <div
+                        className={`text-sm sm:text-base font-black font-mono tracking-tight truncate leading-tight ${
+                          pendingAmount > 0 ? 'text-amber-900 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                        title={formatCurrency(pendingAmount, 2)}
+                      >
+                        {formatCurrency(pendingAmount, 0)}
+                      </div>
+                      <div className={`text-[10px] font-medium truncate mt-0.5 ${
+                        pendingAmount > 0 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400'
+                      }`}>
+                        {pendingAmount > 0 ? 'Unpaid' : 'Cleared ✓'}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Box 2: Pending Amount */}
-                <div className={`rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden shadow-xs border min-w-0 ${
-                  pendingAmount > 0
-                    ? 'bg-amber-50/80 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-800/40'
-                    : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800'
-                }`}>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider truncate ${
-                      pendingAmount > 0 ? 'text-amber-800 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
-                    }`}>
-                      Pending Dues
-                    </span>
-                    <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                {/* BOTTOM ROW: The 3 Action Buttons (No Active badge, zero extra gap) */}
+                <div className="flex items-center gap-2 pt-1 w-full min-w-0">
+                  {/* 1. Pay Installment (Always available; dimmed/less visible when pendingAmount <= 0) */}
+                  <button
+                    onClick={() => handleOpenInstallment(cust)}
+                    className={`flex-1 min-w-0 px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       pendingAmount > 0
-                        ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                    }`}>
-                      <Clock className="w-2.5 h-2.5" />
-                    </div>
-                  </div>
-                  <div className="mt-1 min-w-0">
-                    <div
-                      className={`text-sm sm:text-base font-black font-mono tracking-tight truncate leading-tight ${
-                        pendingAmount > 0 ? 'text-amber-900 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'
-                      }`}
-                      title={formatCurrency(pendingAmount, 2)}
-                    >
-                      {formatCurrency(pendingAmount, 0)}
-                    </div>
-                    <div className={`text-[10px] font-medium truncate mt-0.5 ${
-                      pendingAmount > 0 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400'
-                    }`}>
-                      {pendingAmount > 0 ? 'Unpaid' : 'Cleared ✓'}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98]'
+                        : 'bg-slate-100/90 dark:bg-slate-800/60 hover:bg-slate-200/90 dark:hover:bg-slate-700/80 text-slate-400 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700/80 opacity-50 hover:opacity-90'
+                    }`}
+                    title={
+                      pendingAmount > 0
+                        ? `Record repayment of pending due (${formatCurrency(pendingAmount)})`
+                        : 'Due is ₹0 (No outstanding dues to repay)'
+                    }
+                  >
+                    <Wallet className={`w-3.5 h-3.5 shrink-0 ${pendingAmount > 0 ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} />
+                    <span className="truncate">Pay Installment</span>
+                  </button>
 
-              {/* BOTTOM ROW: Active badge on left, Mail + View History buttons on right */}
-              <div className="flex items-center justify-between pt-1 gap-2 flex-wrap min-w-0">
-                {/* Active Customer badge */}
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Active</span>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {pendingAmount > 0 && (
-                    <button
-                      onClick={() => handleOpenInstallment(cust)}
-                      className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-md shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                      title="Record an installment repayment for customer pending dues"
-                    >
-                      <Wallet className="w-3.5 h-3.5" />
-                      <span>Pay Installment</span>
-                    </button>
-                  )}
-
-                  {cust.email ? (
+                  {/* 2. Mail Button (If email available) */}
+                  {cust.email && (
                     <a
                       href={`mailto:${cust.email}?subject=Your Purchase Summary - Smart Merchant Store&body=Dear ${cust.name},%0A%0AThank you for being our valued customer! Your lifetime spend is ${formatCurrency(lifetimeSpend, 2)} across ${ordersCount} orders.%0A%0ARegards,%0ASmart Merchant Store`}
-                      className="border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all shadow-xs"
+                      className="shrink-0 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-xs"
                       title="Send Email"
                     >
-                      <Send className="w-3 h-3" />
+                      <Send className="w-3.5 h-3.5 shrink-0" />
                       <span>Mail</span>
                     </a>
-                  ) : null}
+                  )}
 
+                  {/* 3. View History Button */}
                   <button
                     onClick={() => handleViewCustomer(cust)}
-                    className="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    className="flex-1 min-w-0 bg-[#4f46e5] hover:bg-[#4338ca] text-white px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>View History</span>
+                    <Eye className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">View History</span>
                   </button>
                 </div>
               </div>
